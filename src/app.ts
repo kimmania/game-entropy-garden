@@ -18,6 +18,8 @@ export class App {
   static async bootstrap(): Promise<void> {
     const app = new App();
     await app.init();
+    // Expose for debugging / smoke tests
+    (window as unknown as { __app: App }).__app = app;
   }
 
   async init(): Promise<void> {
@@ -190,30 +192,35 @@ export class App {
         return;
       }
 
-      // Check if tapping a gate
-      const gate = getGateAt(this.state!, cell.x, cell.y);
-      if (gate) {
-        r.selectedGateUid = gate.uid;
-        // Start wire from gate's output
-        const def = GATE_DEFS[gate.type];
-        if (def.outputs > 0) {
-          r.wireFrom = { gateUid: gate.uid, pin: 0 };
-        }
-        r.render();
-        return;
-      }
-
-      // Check if tapping another gate (to complete wire)
+      // If we have a pending wire and tap a different gate, complete the wire
       if (r.wireFrom && this.state) {
         const targetGate = getGateAt(this.state, cell.x, cell.y);
         if (targetGate && targetGate.uid !== r.wireFrom.gateUid) {
           const def = GATE_DEFS[targetGate.type];
           if (def.inputs > 0) {
             this.handleCompleteWire(targetGate.uid, 0);
+          } else {
+            // Target has no inputs (e.g. INPUT gate) — cancel wire
+            r.wireFrom = null;
+            r.wirePreviewTo = null;
           }
+          r.render();
+          return;
         }
+        // Tapped the same gate or empty space — cancel pending wire
         r.wireFrom = null;
         r.wirePreviewTo = null;
+        // Fall through to handle the tap normally
+      }
+
+      // Check if tapping a gate — start wire from its output
+      const gate = getGateAt(this.state!, cell.x, cell.y);
+      if (gate) {
+        r.selectedGateUid = gate.uid;
+        const def = GATE_DEFS[gate.type];
+        if (def.outputs > 0) {
+          r.wireFrom = { gateUid: gate.uid, pin: 0 };
+        }
         r.render();
         return;
       }
