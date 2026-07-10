@@ -21,6 +21,8 @@ html, body {
   touch-action: none;
 }
 #app { display: flex; flex-direction: column; height: 100dvh; width: 100vw; }
+#game-view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+#map-view { flex: 1; }
 
 /* Header */
 .header {
