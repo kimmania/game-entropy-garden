@@ -1,0 +1,234 @@
+[
+  {
+    "id": "tut-01",
+    "name": "First Signal",
+    "garden": "tutorial",
+    "gardenName": "Tutorial Gardens",
+    "grid": { "width": 6, "height": 4 },
+    "inputs": [
+      { "id": "A", "type": "static", "value": [1, 0, 1, 0] }
+    ],
+    "outputs": [
+      { "id": "Y", "target": [0, 1, 0, 1] }
+    ],
+    "survivalTime": 5,
+    "starGates": [3, 2, 1],
+    "palette": ["NOT"],
+    "startingEntropy": 0,
+    "description": "Welcome to the Entropy Garden. Connect the input to a NOT gate, then to the output. Watch the signal invert."
+  },
+  {
+    "id": "tut-02",
+    "name": "Conjunction",
+    "garden": "tutorial",
+    "gardenName": "Tutorial Gardens",
+    "grid": { "width": 6, "height": 4 },
+    "inputs": [
+      { "id": "A", "type": "static", "value": [1, 1, 0, 0] },
+      { "id": "B", "type": "static", "value": [1, 0, 1, 0] }
+    ],
+    "outputs": [
+      { "id": "Y", "target": [1, 0, 0, 0] }
+    ],
+    "survivalTime": 5,
+    "starGates": [2, 1, 1],
+    "palette": ["AND"],
+    "startingEntropy": 0,
+    "description": "Two inputs meet at an AND gate. Both must be 1 for the output to be 1."
+  },
+  {
+    "id": "tut-03",
+    "name": "Either Or",
+    "garden": "tutorial",
+    "gardenName": "Tutorial Gardens",
+    "grid": { "width": 6, "height": 4 },
+    "inputs": [
+      { "id": "A", "type": "static", "value": [1, 0, 1, 0] },
+      { "id": "B", "type": "static", "value": [0, 0, 1, 1] }
+    ],
+    "outputs": [
+      { "id": "Y", "target": [1, 0, 1, 1] }
+    ],
+    "survivalTime": 5,
+    "starGates": [2, 1, 1],
+    "palette": ["OR"],
+    "startingEntropy": 0,
+    "description": "An OR gate outputs 1 if either input is 1. Connect both inputs and observe."
+  },
+  {
+    "id": "tut-04",
+    "name": "Double Negative",
+    "garden": "tutorial",
+    "gardenName": "Tutorial Gardens",
+    "grid": { "width": 7, "height": 4 },
+    "inputs": [
+      { "id": "A", "type": "static", "value": [1, 0, 1, 0] }
+    ],
+    "outputs": [
+      { "id": "Y", "target": [1, 0, 1, 0] }
+    ],
+    "survivalTime": 5,
+    "starGates": [3, 2, 1],
+    "palette": ["NOT"],
+    "startingEntropy": 0,
+    "description": "Two NOT gates in series cancel out. The signal passes through unchanged."
+  },
+  {
+    "id": "heat-01",
+    "name": "Thermal Bloom",
+    "garden": "heat-chamber",
+    "gardenName": "Heat Chambers",
+    "grid": { "width": 8, "height": 6 },
+    "inputs": [
+      { "id": "A", "type": "static", "value": [1, 0, 1, 0] },
+      { "id": "B", "type": "static", "value": [1, 1, 0, 0] }
+    ],
+    "outputs": [
+      { "id": "Y", "target": [1, 0, 0, 0] }
+    ],
+    "survivalTime": 10,
+    "starGates": [4, 3, 2],
+    "palette": ["AND", "OR", "NOT", "BUFFER", "COOLER"],
+    "startingEntropy": 0.05,
+    "description": "Heat accelerates decay. Place a COOLER near dense gates to keep them stable."
+  },
+  {
+    "id": "heat-02",
+    "name": "Scorched Paths",
+    "garden": "heat-chamber",
+    "gardenName": "Heat Chambers",
+    "grid": { "width": 8, "height": 6 },
+    "inputs": [
+      { "id": "A", "type": "static", "value": [1, 1, 0, 0] },
+      { "id": "B", "type": "clock", "period": 4 }
+    ],
+    "outputs": [
+      { "id": "Y", "target": [1, 0, 0, 1] }
+    ],
+    "survivalTime": 12,
+    "starGates": [5, 4, 3],
+    "palette": ["AND", "OR", "NOT", "XOR", "BUFFER", "COOLER"],
+    "startingEntropy": 0.1,
+    "description": "A clock input alternates. XOR it with a static input. Mind the heat."
+  },
+  {
+    "id": "marathon-01",
+    "name": "Long Haul",
+    "garden": "marathon",
+    "gardenName": "Marathon Gardens",
+    "grid": { "width": 8, "height": 6 },
+    "inputs": [
+      { "id": "A", "type": "static", "value": [1, 0] },
+      { "id": "B", "type": "static", "value": [0, 1] }
+    ],
+    "outputs": [
+      { "id": "Y", "target": [1, 1] }
+    ],
+    "survivalTime": 20,
+    "starGates": [4, 3, 2],
+    "palette": ["AND", "OR", "NOT", "BUFFER", "COOLER"],
+    "startingEntropy": 0.08,
+    "description": "Survival is the challenge. Add redundancy and cooling to last 20 seconds."
+  },
+  {
+    "id": "marathon-02",
+    "name": "Endurance Test",
+    "garden": "marathon",
+    "gardenName": "Marathon Gardens",
+    "grid": { "width": 10, "height": 6 },
+    "inputs": [
+      { "id": "A", "type": "clock", "period": 2 },
+      { "id": "B", "type": "clock", "period": 4 }
+    ],
+    "outputs": [
+      { "id": "Y", "target": [0, 1, 1, 0] }
+    ],
+    "survivalTime": 25,
+    "starGates": [6, 5, 3],
+    "palette": ["AND", "OR", "NOT", "XOR", "NAND", "BUFFER", "COOLER", "REDUNDANT"],
+    "startingEntropy": 0.12,
+    "description": "Two clocks at different frequencies. Build a resilient circuit that endures."
+  },
+  {
+    "id": "storm-01",
+    "name": "Flickering Wires",
+    "garden": "storm-garden",
+    "gardenName": "Storm Gardens",
+    "grid": { "width": 8, "height": 6 },
+    "inputs": [
+      { "id": "A", "type": "static", "value": [1, 0, 1, 0] },
+      { "id": "B", "type": "static", "value": [0, 1, 1, 0] }
+    ],
+    "outputs": [
+      { "id": "Y", "target": [1, 1, 1, 0] }
+    ],
+    "survivalTime": 15,
+    "starGates": [4, 3, 2],
+    "palette": ["AND", "OR", "NOT", "XOR", "BUFFER", "COOLER"],
+    "startingEntropy": 0.15,
+    "description": "High starting entropy means wires corrode fast. Use buffers to refresh signals."
+  },
+  {
+    "id": "zen-01",
+    "name": "Stillness",
+    "garden": "zen-garden",
+    "gardenName": "Zen Gardens",
+    "grid": { "width": 6, "height": 4 },
+    "inputs": [
+      { "id": "A", "type": "static", "value": [1, 0, 1, 0] },
+      { "id": "B", "type": "static", "value": [1, 1, 0, 0] }
+    ],
+    "outputs": [
+      { "id": "Y", "target": [1, 0, 0, 0] }
+    ],
+    "survivalTime": 8,
+    "starGates": [2, 1, 1],
+    "palette": ["AND", "OR", "NOT"],
+    "startingEntropy": 0,
+    "description": "No heat, no decay. Pure logic. Find the minimal solution."
+  },
+  {
+    "id": "cascade-01",
+    "name": "Broken Path",
+    "garden": "cascade",
+    "gardenName": "Cascade Gardens",
+    "grid": { "width": 8, "height": 6 },
+    "inputs": [
+      { "id": "A", "type": "static", "value": [1, 0, 1, 0] }
+    ],
+    "outputs": [
+      { "id": "Y", "target": [0, 1, 0, 1] }
+    ],
+    "survivalTime": 10,
+    "starGates": [4, 3, 2],
+    "palette": ["AND", "OR", "NOT", "BUFFER"],
+    "prePlaced": [
+      { "gate": "BROKEN_NOT", "x": 3, "y": 2, "drift": 0.8 }
+    ],
+    "startingEntropy": 0.05,
+    "description": "A broken NOT gate sits in your path. Route around it or find a way to use it."
+  },
+  {
+    "id": "cascade-02",
+    "name": "Maze of Failure",
+    "garden": "cascade",
+    "gardenName": "Cascade Gardens",
+    "grid": { "width": 8, "height": 6 },
+    "inputs": [
+      { "id": "A", "type": "static", "value": [1, 1, 0, 0] },
+      { "id": "B", "type": "static", "value": [1, 0, 1, 0] }
+    ],
+    "outputs": [
+      { "id": "Y", "target": [0, 1, 1, 0] }
+    ],
+    "survivalTime": 12,
+    "starGates": [5, 4, 3],
+    "palette": ["AND", "OR", "NOT", "XOR", "BUFFER"],
+    "prePlaced": [
+      { "gate": "BROKEN_NOT", "x": 2, "y": 1, "drift": 0.7 },
+      { "gate": "BROKEN_NOT", "x": 4, "y": 3, "drift": 0.6 }
+    ],
+    "startingEntropy": 0.08,
+    "description": "Two broken gates block your path. XOR of the inputs gives the target. Route carefully."
+  }
+]
