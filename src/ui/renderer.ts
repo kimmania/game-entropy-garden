@@ -79,9 +79,9 @@ export class Renderer {
   }
 
   private toGrid(sx: number, sy: number): { x: number; y: number } {
-    const gx = Math.floor((sx - this.panX) / this.zoom - PAD) / this.cellSize;
-    const gy = Math.floor((sy - this.panY) / this.zoom - PAD) / this.cellSize;
-    return { x: Math.floor(gx), y: Math.floor(gy) };
+    const gx = Math.floor(((sx - this.panX) / this.zoom - PAD) / this.cellSize);
+    const gy = Math.floor(((sy - this.panY) / this.zoom - PAD) / this.cellSize);
+    return { x: gx, y: gy };
   }
 
   getCellFromPointer(clientX: number, clientY: number): { x: number; y: number } {

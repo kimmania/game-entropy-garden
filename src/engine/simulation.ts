@@ -324,8 +324,12 @@ export function tickSimulation(state: GameState): void {
 }
 
 export function checkWin(state: GameState): boolean {
-  // Need correct output for the full survival time
-  return state.elapsed >= state.level.survivalTime && state.correctTicks >= TICKS_PER_SECOND;
+  // Win when survival time is reached AND the circuit produced correct output
+  // for at least 80% of all ticks (not requiring a perfect streak).
+  if (state.elapsed < state.level.survivalTime) return false;
+  if (state.totalTicks === 0) return false;
+  const ratio = state.totalCorrect / state.totalTicks;
+  return ratio >= 0.8;
 }
 
 export function checkLoss(state: GameState): boolean {

@@ -3,7 +3,7 @@ import type { GateDef, GateType, Signal } from './types.js';
 export const GATE_DEFS: Record<GateType, GateDef> = {
   AND:      { type: 'AND',      inputs: 2, outputs: 1, heat: 1, reliability: 0.95, decayRate: 0.001, size: 1, unlocked: 1, label: 'AND',   symbol: '&',    color: '#4a9eff' },
   OR:       { type: 'OR',       inputs: 2, outputs: 1, heat: 1, reliability: 0.95, decayRate: 0.001, size: 1, unlocked: 1, label: 'OR',    symbol: '≥1',   color: '#4a9eff' },
-  NOT:      { type: 'NOT',      inputs: 1, outputs: 1, heat: 1, reliability: 0.93, decayRate: 0.002, size: 1, unlocked: 1, label: 'NOT',   symbol: '!',    color: '#4a9eff' },
+  NOT:      { type: 'NOT',      inputs: 1, outputs: 1, heat: 1, reliability: 0.99, decayRate: 0.0005, size: 1, unlocked: 1, label: 'NOT',   symbol: '!',    color: '#4a9eff' },
   XOR:      { type: 'XOR',      inputs: 2, outputs: 1, heat: 0.8, reliability: 0.98, decayRate: 0.0005, size: 1, unlocked: 2, label: 'XOR',   symbol: '⊕',    color: '#52d4a8' },
   NAND:     { type: 'NAND',     inputs: 2, outputs: 1, heat: 1.5, reliability: 0.92, decayRate: 0.002, size: 1, unlocked: 3, label: 'NAND',  symbol: '⊼',    color: '#f0a830' },
   CLOCK:    { type: 'CLOCK',    inputs: 0, outputs: 1, heat: 0.5, reliability: 0.97, decayRate: 0.001, size: 1, unlocked: 4, label: 'CLOCK', symbol: '◷',    color: '#d4696b' },
