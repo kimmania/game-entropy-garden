@@ -61,6 +61,7 @@ export class App {
           <button class="icon-btn" id="btn-help">?</button>
         </div>
         <div class="game-area">
+          <div class="goal-banner" id="goal-banner"></div>
           <div class="canvas-wrap"><canvas id="board"></canvas></div>
           <div class="bottom-panel">
             <div class="truth-table" id="truth-table"></div>
@@ -145,6 +146,7 @@ export class App {
     this.setupCanvas();
     this.buildPalette();
     this.buildControls();
+    this.updateGoalBanner();
     this.updateTruthTable();
     this.updateStatus();
     this.renderer?.render();
@@ -386,6 +388,7 @@ export class App {
     if (this.state.simState !== 'running') return;
     tickSimulation(this.state);
     this.renderer.render();
+    this.updateGoalBanner();
     this.updateTruthTable();
     this.updateStatus();
 
@@ -402,6 +405,7 @@ export class App {
     if (!this.state || !this.renderer) return;
     tickSimulation(this.state);
     this.renderer.render();
+    this.updateGoalBanner();
     this.updateTruthTable();
     this.updateStatus();
   }
@@ -411,6 +415,7 @@ export class App {
     this.stopSimulation();
     resetSimulation(this.state);
     this.renderer.render();
+    this.updateGoalBanner();
     this.updateTruthTable();
     this.updateStatus();
   }
@@ -425,6 +430,7 @@ export class App {
     resetSimulation(this.state);
     this.saveCircuitNow();
     this.renderer.render();
+    this.updateGoalBanner();
     this.updateTruthTable();
     this.updateStatus();
   }
@@ -479,6 +485,43 @@ export class App {
     `);
     document.getElementById('modal-retry')!.onclick = () => { this.hideModal(); this.resetSim(); };
     document.getElementById('modal-map')!.onclick = () => { this.hideModal(); this.showMap(); };
+  }
+
+  // === Goal Banner ===
+  private updateGoalBanner(): void {
+    if (!this.state) return;
+    const banner = document.getElementById('goal-banner')!;
+    const lvl = this.state.level;
+
+    // Build truth table summary: inputs → target outputs
+    const inputLabels = lvl.inputs.map(i => i.id).join(', ');
+    const outputLabels = lvl.outputs.map(o => o.id).join(', ');
+    const targetRows = lvl.outputs[0]?.target ?? [];
+    const targetStr = targetRows.length <= 4 ? targetRows.join('') : targetRows.slice(0, 4).join('') + '…';
+
+    // Count user-placed gates (exclude INPUT/OUTPUT/BROKEN_NOT)
+    const gateCount = this.state.gates.filter(
+      g => g.type !== 'INPUT' && g.type !== 'OUTPUT' && g.type !== 'BROKEN_NOT'
+    ).length;
+    const efficiencyTarget = lvl.starGates[2] ?? 0;
+
+    // Build pills
+    let pills = '';
+    pills += `<span class="goal-pill survive">⏱ ${this.state.elapsed.toFixed(1)}/${lvl.survivalTime}s</span>`;
+    pills += `<span class="goal-pill gates">⚙ ${gateCount}/${efficiencyTarget}</span>`;
+    if (lvl.startingEntropy > 0) {
+      pills += `<span class="goal-pill warn">⚡ ${Math.round(lvl.startingEntropy * 100)}% entropy</span>`;
+    }
+
+    // Build description text
+    const desc = lvl.description;
+    const ioStr = `Input: ${inputLabels} → Target: ${outputLabels} = [${targetStr}]`;
+
+    banner.innerHTML = `
+      <span class="goal-icon">🎯</span>
+      <span class="goal-text"><strong>${lvl.name}</strong> — ${desc}<br><span style="color:var(--text-dim);font-size:11px">${ioStr}</span></span>
+      <span class="goal-pills">${pills}</span>
+    `;
   }
 
   // === Truth Table ===
