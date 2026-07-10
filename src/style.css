@@ -65,6 +65,55 @@ html, body {
 .goal-pill.palette { background: rgba(74, 158, 255, 0.15); color: var(--accent-blue); border: 1px solid rgba(74, 158, 255, 0.3); }
 .goal-pill.warn { background: rgba(212, 105, 107, 0.15); color: var(--accent-red); border: 1px solid rgba(212, 105, 107, 0.3); }
 
+/* Help modal content */
+.help-section { margin-bottom: 14px; }
+.help-section h3 { font-size: 14px; color: var(--accent); margin-bottom: 6px; }
+.gate-ref { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.gate-ref-item {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 8px; font-size: 12px;
+}
+.gate-ref-item .gate-sym {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 4px; font-weight: bold; font-size: 13px;
+}
+.gate-ref-item .gate-desc { color: var(--text-dim); font-size: 11px; }
+
+/* Help example diagram */
+.help-example {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px; margin: 8px 0;
+}
+.ex-node {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.ex-gate {
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: 6px;
+  font-weight: bold; font-size: 16px; border: 2px solid;
+}
+.ex-label { font-size: 10px; color: var(--text-dim); }
+.ex-wire {
+  flex: 0 0 auto; height: 3px; min-width: 20px; border-radius: 2px;
+}
+.ex-wire.on { background: var(--accent); }
+.ex-wire.off { background: var(--accent-blue); }
+.ex-arrow { font-size: 14px; color: var(--text-dim); }
+.ex-tt {
+  display: flex; gap: 4px; align-items: center; margin-top: 8px;
+  font-family: monospace; font-size: 12px;
+}
+.ex-tt-row { display: flex; gap: 2px; align-items: center; }
+.ex-tt-cell {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 3px; font-size: 11px;
+}
+.ex-tt-cell.on { background: var(--accent); color: var(--bg); }
+.ex-tt-cell.off { background: rgba(80,120,60,0.2); color: var(--text-dim); }
+.ex-tt-cell.target { border: 1px dashed var(--text-dim); }
+
 /* Bottom panel */
 .bottom-panel {
   display: flex; flex-direction: column; gap: 6px;

@@ -587,17 +587,88 @@ export class App {
   private showHelp(): void {
     this.save.hasSeenHelp = true;
     saveSave(this.save);
+
+    // Build gate reference cards
+    const gateRef = [
+      { sym: '&', label: 'AND', color: '#4a9eff', desc: 'Output is 1 only if both inputs are 1. X acts as 1 (risky).' },
+      { sym: '≥1', label: 'OR', color: '#4a9eff', desc: 'Output is 1 if either input is 1. X acts as 0.' },
+      { sym: '!', label: 'NOT', color: '#4a9eff', desc: 'Inverts input: 1→0, 0→1. Adds 1 tick delay.' },
+      { sym: '⊕', label: 'XOR', color: '#52d4a8', desc: 'Output is 1 if inputs differ. Most stable gate.' },
+      { sym: '⊼', label: 'NAND', color: '#f0a830', desc: 'AND then NOT. Versatile but runs hot.' },
+      { sym: '◷', label: 'CLOCK', color: '#d4696b', desc: 'Pulses 0/1 at a fixed interval. No inputs.' },
+      { sym: '▷', label: 'BUFFER', color: '#a06ed4', desc: 'Passes signal through. Cleans weak (X) to last known value.' },
+      { sym: '❄', label: 'COOLER', color: '#6bcfff', desc: 'Reduces heat in 3×3 area. Place near dense gates.' },
+      { sym: '≡', label: 'REDUNDANT', color: '#e8d05c', desc: 'Majority-vote of two inputs. Very resilient, very large.' },
+    ];
+    let gateRefHtml = '';
+    for (const g of gateRef) {
+      gateRefHtml += `<div class="gate-ref-item"><span class="gate-sym" style="background:${g.color}22;color:${g.color};border:1px solid ${g.color}">${g.sym}</span><div><div>${g.label}</div><div class="gate-desc">${g.desc}</div></div></div>`;
+    }
+
     this.showModal(`
       <h2>Entropy Garden</h2>
       <p><strong>Build logic circuits that survive decay.</strong></p>
-      <p><strong>How to play:</strong></p>
-      <p>1. <strong>Place gates</strong> — Tap a gate in the palette, then tap a grid cell to place it.</p>
-      <p>2. <strong>Wire gates</strong> — Tap a gate's output (right side), then tap another gate's input (left side) to connect them.</p>
-      <p>3. <strong>Run the simulation</strong> — Press Run to start. The circuit must produce correct output for the full survival time.</p>
-      <p>4. <strong>Decay happens</strong> — Gates drift and wires corrode over time. Use BUFFERS to refresh signals and COOLERS to reduce heat.</p>
-      <p>5. <strong>Delete</strong> — Tap a wire to delete it. Select a gate and press Delete to remove it.</p>
-      <p><strong>Signals:</strong> Green = 1, Blue = 0, Gray = weak (X)</p>
-      <p><strong>Truth table:</strong> Bottom panel shows current input (left), actual output (middle), and target (right). Red = mismatch.</p>
+
+      <div class="help-section">
+        <h3>How to Play</h3>
+        <p>1. <strong>Place gates</strong> — Tap a gate in the palette, then tap a grid cell to place it.</p>
+        <p>2. <strong>Wire gates</strong> — Tap a gate's output pin (right side dot), then tap another gate's input to connect them.</p>
+        <p>3. <strong>Run the simulation</strong> — Press Run. The circuit must produce the correct output for the full survival time shown in the goal banner.</p>
+        <p>4. <strong>Decay happens</strong> — Gates drift (⚡) and wires corrode over time. Use <strong style="color:#a06ed4">BUFFER</strong> to refresh weak signals and <strong style="color:#6bcfff">COOLER</strong> to reduce heat.</p>
+        <p>5. <strong>Delete</strong> — Tap a wire to remove it. Select a gate, then tap Delete to remove it.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Gate Reference</h3>
+        <div class="gate-ref">${gateRefHtml}</div>
+      </div>
+
+      <div class="help-section">
+        <h3>Example: A NOT Circuit</h3>
+        <p>Input <strong>A</strong> passes through a <strong>NOT</strong> gate to produce output <strong>Y</strong>. The truth table shows every input value and its inverted result:</p>
+        <div class="help-example">
+          <div class="ex-node">
+            <div class="ex-gate" style="border-color:#4ade80;color:#4ade80;background:#4ade8022">▶</div>
+            <span class="ex-label">A (input)</span>
+          </div>
+          <div class="ex-wire on"></div>
+          <div class="ex-node">
+            <div class="ex-gate" style="border-color:#4a9eff;color:#4a9eff;background:#4a9eff22">!</div>
+            <span class="ex-label">NOT</span>
+          </div>
+          <div class="ex-wire on"></div>
+          <div class="ex-node">
+            <div class="ex-gate" style="border-color:#4ade80;color:#4ade80;background:#4ade8022">◀</div>
+            <span class="ex-label">Y (output)</span>
+          </div>
+        </div>
+        <div class="ex-tt">
+          <span style="color:var(--text-dim)">A:</span>
+          <div class="ex-tt-row">
+            <span class="ex-tt-cell on">1</span>
+            <span class="ex-tt-cell off">0</span>
+            <span class="ex-tt-cell on">1</span>
+            <span class="ex-tt-cell off">0</span>
+          </div>
+          <span class="ex-arrow">→</span>
+          <span style="color:var(--text-dim)">Y:</span>
+          <div class="ex-tt-row">
+            <span class="ex-tt-cell off target">0</span>
+            <span class="ex-tt-cell on target">1</span>
+            <span class="ex-tt-cell off target">0</span>
+            <span class="ex-tt-cell on target">1</span>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--text-dim)">When A=1, NOT outputs 0. When A=0, NOT outputs 1. The goal is to match the target column for the entire survival duration.</p>
+      </div>
+
+      <div class="help-section">
+        <h3>Reading the Interface</h3>
+        <p><strong>Signals:</strong> <span style="color:var(--accent)">Green = 1</span>, <span style="color:var(--accent-blue)">Blue = 0</span>, <span style="color:#888">Gray = weak (X)</span></p>
+        <p><strong>Goal banner:</strong> Shows the level objective, input→target mapping, and live status pills (survival time, gate count, entropy).</p>
+        <p><strong>Truth table:</strong> Bottom panel shows current input (left), actual output (middle), and target (right). Red = mismatch.</p>
+      </div>
+
       <div class="modal-buttons">
         <button class="ctrl-btn primary" id="modal-close">Start Building</button>
       </div>
