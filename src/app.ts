@@ -1,6 +1,6 @@
 import type { GameState, LevelDef, GateType, SaveData } from './engine/types.js';
 import { GATE_DEFS, TICKS_PER_SECOND } from './engine/gates.js';
-import { createGameState, addGate, addWire, removeGate, removeWire, rotateGate, tickSimulation, resetSimulation, checkWin, checkLoss, canPlaceGate, getGateAt } from './engine/simulation.js';
+import { createGameState, addGate, addWire, removeGate, removeWire, rotateGate, tickSimulation, resetSimulation, checkWin, checkLoss, canPlaceGate } from './engine/simulation.js';
 import { loadSave, saveSave, loadCircuit, saveCircuit, completeLevel, unlockLevel, isCompleted, isUnlocked } from './engine/storage.js';
 import { Renderer } from './ui/renderer.js';
 
@@ -192,13 +192,15 @@ export class App {
         return;
       }
 
+      // Use distance-based hit detection (same approach as game-patchwork)
+      const hitGate = r.getGateFromPointer(e.clientX, e.clientY);
+
       // If we have a pending wire and tap a different gate, complete the wire
       if (r.wireFrom && this.state) {
-        const targetGate = getGateAt(this.state, cell.x, cell.y);
-        if (targetGate && targetGate.uid !== r.wireFrom.gateUid) {
-          const def = GATE_DEFS[targetGate.type];
+        if (hitGate && hitGate.uid !== r.wireFrom.gateUid) {
+          const def = GATE_DEFS[hitGate.type];
           if (def.inputs > 0) {
-            this.handleCompleteWire(targetGate.uid, 0);
+            this.handleCompleteWire(hitGate.uid, 0);
           } else {
             // Target has no inputs (e.g. INPUT gate) — cancel wire
             r.wireFrom = null;
@@ -214,12 +216,11 @@ export class App {
       }
 
       // Check if tapping a gate — start wire from its output
-      const gate = getGateAt(this.state!, cell.x, cell.y);
-      if (gate) {
-        r.selectedGateUid = gate.uid;
-        const def = GATE_DEFS[gate.type];
+      if (hitGate) {
+        r.selectedGateUid = hitGate.uid;
+        const def = GATE_DEFS[hitGate.type];
         if (def.outputs > 0) {
-          r.wireFrom = { gateUid: gate.uid, pin: 0 };
+          r.wireFrom = { gateUid: hitGate.uid, pin: 0 };
         }
         r.render();
         return;

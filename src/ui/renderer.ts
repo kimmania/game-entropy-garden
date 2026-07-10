@@ -91,8 +91,19 @@ export class Renderer {
 
   getGateFromPointer(clientX: number, clientY: number): PlacedGate | null {
     if (!this._state) return null;
-    const cell = this.getCellFromPointer(clientX, clientY);
-    return this._state.gates.find(g => g.x === cell.x && g.y === cell.y) ?? null;
+    const rect = this.canvas.getBoundingClientRect();
+    const px = clientX - rect.left;
+    const py = clientY - rect.top;
+    // Distance-based hit detection: check each gate's center
+    const hitRadius = (this.cellSize * this.zoom) * 0.55; // slightly generous
+    for (let i = this._state.gates.length - 1; i >= 0; i--) {
+      const g = this._state.gates[i];
+      const center = this.toScreen(g.x + 0.5, g.y + 0.5);
+      const dx = px - center.x;
+      const dy = py - center.y;
+      if (dx * dx + dy * dy <= hitRadius * hitRadius) return g;
+    }
+    return null;
   }
 
   getWireFromPointer(clientX: number, clientY: number): WireSegment | null {
