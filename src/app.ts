@@ -14,6 +14,7 @@ export class App {
   private canvas: HTMLCanvasElement | null = null;
   private simTimer: number | null = null;
   private armedGate: GateType | null = null;
+  private wireMode = false;
   private _dragState: { gateUid: number; startX: number; startY: number; moved: boolean } | null = null;
 
   static async bootstrap(): Promise<void> {
@@ -201,6 +202,17 @@ export class App {
           const def = GATE_DEFS[hitGate.type];
           if (def.inputs > 0) {
             this.handleCompleteWire(hitGate.uid, 0);
+            // In wire mode, immediately arm from the target gate if it has outputs
+            if (this.wireMode) {
+              const targetDef = GATE_DEFS[hitGate.type];
+              if (targetDef.outputs > 0) {
+                r.wireFrom = { gateUid: hitGate.uid, pin: 0 };
+                this.toast('Tap next gate to connect');
+              } else {
+                r.wireFrom = null;
+                r.wirePreviewTo = null;
+              }
+            }
           } else {
             // Target has no inputs (e.g. INPUT gate) — cancel wire
             r.wireFrom = null;
@@ -216,16 +228,16 @@ export class App {
         // Fall through to handle the tap normally
       }
 
-      // Check if tapping a gate — select it and start wire from its output
+      // Check if tapping a gate — select it, start wire (if wire mode), or begin drag
       if (hitGate) {
         r.selectedGateUid = hitGate.uid;
         const def = GATE_DEFS[hitGate.type];
-        if (def.outputs > 0) {
+        if (this.wireMode && def.outputs > 0) {
           r.wireFrom = { gateUid: hitGate.uid, pin: 0 };
           this.toast('Tap a gate with an input to connect');
         }
-        // Start drag if this is a movable gate
-        if (hitGate.type !== 'INPUT' && hitGate.type !== 'OUTPUT' && hitGate.type !== 'BROKEN_NOT') {
+        // Start drag if this is a movable gate (only when not in wire mode)
+        if (!this.wireMode && hitGate.type !== 'INPUT' && hitGate.type !== 'OUTPUT' && hitGate.type !== 'BROKEN_NOT') {
           this._dragState = {
             gateUid: hitGate.uid,
             startX: e.clientX,
@@ -383,6 +395,7 @@ export class App {
       html += `<div class="gate-btn ${armed}" data-gate="${type}"><span class="symbol">${def.symbol}</span><span class="label">${def.label}</span></div>`;
     }
     // Tools
+    html += `<div class="gate-btn ${this.wireMode ? 'armed' : ''}" data-tool="wire"><span class="symbol">⇄</span><span class="label">Wire</span></div>`;
     html += `<div class="gate-btn" data-tool="rotate"><span class="symbol">↻</span><span class="label">Rotate</span></div>`;
     html += `<div class="gate-btn" data-tool="delete"><span class="symbol">✕</span><span class="label">Delete</span></div>`;
     palette.innerHTML = html;
@@ -394,9 +407,22 @@ export class App {
         const tool = el.dataset.tool;
         if (gateType) {
           this.armedGate = this.armedGate === gateType ? null : gateType as GateType;
+          this.wireMode = false; // selecting a gate turns off wire mode
           if (this.renderer) this.renderer.armedGateType = this.armedGate;
+          if (this.renderer) this.renderer.wireFrom = null;
           this.buildPalette();
           this.renderer?.render();
+        } else if (tool === 'wire') {
+          this.wireMode = !this.wireMode;
+          this.armedGate = null;
+          if (this.renderer) this.renderer.armedGateType = null;
+          if (!this.wireMode && this.renderer) {
+            this.renderer.wireFrom = null;
+            this.renderer.wirePreviewTo = null;
+          }
+          this.buildPalette();
+          this.renderer?.render();
+          this.toast(this.wireMode ? 'Wire mode on — tap a gate to start connecting' : 'Wire mode off');
         } else if (tool === 'rotate') {
           if (this.state && this.renderer?.selectedGateUid) {
             rotateGate(this.state, this.renderer.selectedGateUid);
@@ -721,7 +747,7 @@ export class App {
       <div class="help-section">
         <h3>How to Play</h3>
         <p>1. <strong>Place gates</strong> — Tap a gate in the palette, then tap a grid cell to place it. <strong>Drag a placed gate</strong> to move it to a new cell.</p>
-        <p>2. <strong>Wire gates</strong> — Tap a gate with an output to arm a wire (a blue pulsing ring appears). Then tap a target gate with an input to connect them. Tap empty space to cancel.</p>
+        <p>2. <strong>Wire gates</strong> — Tap the <strong>⇄ Wire</strong> button to enter Wire mode. Tap a gate with an output to arm a wire (blue pulsing ring appears), then tap a target gate with an input to connect them. In Wire mode, the connection chains automatically so you can wire multiple gates in a row. Tap empty space to cancel. Turn Wire mode off to drag gates again.</p>
         <p>3. <strong>Run the simulation</strong> — Press Run. The circuit must produce the correct output for the full survival time shown in the goal banner.</p>
         <p>4. <strong>Decay happens</strong> — Gates drift (⚡) and wires corrode over time. Use <strong style="color:#a06ed4">BUFFER</strong> to refresh weak signals and <strong style="color:#6bcfff">COOLER</strong> to reduce heat.</p>
         <p>5. <strong>Delete</strong> — Tap a wire to remove it. Select a gate (tap it), then tap the Delete button to remove it. Input/Output gates cannot be deleted.</p>
