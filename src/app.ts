@@ -339,7 +339,10 @@ export class App {
           }
         } else if (tool === 'delete') {
           if (this.state && this.renderer?.selectedGateUid) {
-            removeGate(this.state, this.renderer.selectedGateUid);
+            const gate = this.state.gates.find(g => g.uid === this.renderer!.selectedGateUid);
+            if (gate && gate.type !== 'INPUT' && gate.type !== 'OUTPUT') {
+              removeGate(this.state, this.renderer.selectedGateUid);
+            }
             this.renderer.selectedGateUid = null;
             this.saveCircuitNow();
             this.renderer.render();
@@ -425,7 +428,36 @@ export class App {
   private resetSim(): void {
     if (!this.state || !this.renderer) return;
     this.stopSimulation();
+    // Rebuild gates from the original level — clean board, no user gates/wires
+    const level = this.state.level;
+    this.state.gates = [];
+    this.state.wires = [];
+    this.state.nextGateUid = 1;
+    this.state.nextWireUid = 1;
+    for (let i = 0; i < level.inputs.length; i++) {
+      this.state.gates.push({
+        uid: this.state.nextGateUid++, type: 'INPUT', x: 0, y: 1 + i, rotation: 0,
+        drift: 0, noiseTicks: 0, lastOutput: 0, powered: true,
+      });
+    }
+    for (let i = 0; i < level.outputs.length; i++) {
+      this.state.gates.push({
+        uid: this.state.nextGateUid++, type: 'OUTPUT', x: level.grid.width - 1, y: 1 + i, rotation: 0,
+        drift: 0, noiseTicks: 0, lastOutput: 0, powered: true,
+      });
+    }
+    if (level.prePlaced) {
+      for (const pp of level.prePlaced) {
+        this.state.gates.push({
+          uid: this.state.nextGateUid++, type: pp.gate, x: pp.x, y: pp.y, rotation: 0,
+          drift: pp.drift ?? 0, noiseTicks: 0, lastOutput: 0, powered: false,
+        });
+      }
+    }
     resetSimulation(this.state);
+    this.renderer.selectedGateUid = null;
+    this.renderer.wireFrom = null;
+    this.renderer.wirePreviewTo = null;
     this.renderer.render();
     this.updateGoalBanner();
     this.updateTruthTable();

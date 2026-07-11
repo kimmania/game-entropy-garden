@@ -38,25 +38,27 @@ export class Renderer {
 
   resize(): void {
     this.dpr = window.devicePixelRatio || 1;
-    const rect = this.canvas.getBoundingClientRect();
-    this.canvas.width = rect.width * this.dpr;
-    this.canvas.height = rect.height * this.dpr;
+    const parent = this.canvas.parentElement;
+    const rect = parent ? parent.getBoundingClientRect() : this.canvas.getBoundingClientRect();
+    const cssW = rect.width;
+    const cssH = rect.height;
+    this.canvas.width = Math.floor(cssW * this.dpr);
+    this.canvas.height = Math.floor(cssH * this.dpr);
+    // Do NOT set canvas.style.width/height — let CSS flex layout control it
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    this.fitZoom();
+    this.fitZoom(cssW, cssH);
   }
 
-  private fitZoom(): void {
-    const rect = this.canvas.getBoundingClientRect();
-    const w = this.canvas.width / this.dpr;
-    const h = this.canvas.height / this.dpr;
+  private fitZoom(w?: number, h?: number): void {
+    const cssW = w ?? this.canvas.clientWidth;
+    const cssH = h ?? this.canvas.clientHeight;
     const grid = this._stateGrid();
     if (!grid) return;
     const totalW = grid.width * this.cellSize + PAD * 2;
     const totalH = grid.height * this.cellSize + PAD * 2;
-    this.zoom = Math.min((w - 20) / totalW, (h - 20) / totalH, 1.5);
-    this.panX = (w - totalW * this.zoom) / 2;
-    this.panY = (h - totalH * this.zoom) / 2;
-    void rect;
+    this.zoom = Math.min((cssW - 20) / totalW, (cssH - 20) / totalH, 1.5);
+    this.panX = (cssW - totalW * this.zoom) / 2;
+    this.panY = (cssH - totalH * this.zoom) / 2;
   }
 
   private _state: GameState | null = null;
@@ -64,7 +66,7 @@ export class Renderer {
 
   setState(state: GameState): void {
     this._state = state;
-    this.fitZoom();
+    this.resize();
   }
 
   private _stateGrid(): { width: number; height: number } | null {
