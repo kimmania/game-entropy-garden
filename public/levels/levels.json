@@ -15,7 +15,7 @@
     "starGates": [3, 2, 1],
     "palette": ["NOT"],
     "startingEntropy": 0,
-    "description": "Welcome to the Entropy Garden. Connect the input to a NOT gate, then to the output. Watch the signal invert."
+    "description": "The output must be the opposite of the input. Place a single NOT gate between the input and output."
   },
   {
     "id": "tut-02",
@@ -34,7 +34,7 @@
     "starGates": [2, 1, 1],
     "palette": ["AND"],
     "startingEntropy": 0,
-    "description": "Two inputs meet at an AND gate. Both must be 1 for the output to be 1."
+    "description": "Output is 1 only when both inputs are 1. Wire both inputs into a single AND gate, then to the output."
   },
   {
     "id": "tut-03",
@@ -53,7 +53,7 @@
     "starGates": [2, 1, 1],
     "palette": ["OR"],
     "startingEntropy": 0,
-    "description": "An OR gate outputs 1 if either input is 1. Connect both inputs and observe."
+    "description": "Output is 1 when either input is 1. Wire both inputs into a single OR gate, then to the output."
   },
   {
     "id": "tut-04",
@@ -71,7 +71,7 @@
     "starGates": [3, 2, 1],
     "palette": ["NOT"],
     "startingEntropy": 0,
-    "description": "Two NOT gates in series cancel out. The signal passes through unchanged."
+    "description": "The output must match the input exactly. Use two NOT gates in series — they cancel out, passing the signal through unchanged."
   },
   {
     "id": "heat-01",
@@ -90,7 +90,7 @@
     "starGates": [4, 3, 2],
     "palette": ["AND", "OR", "NOT", "BUFFER", "COOLER"],
     "startingEntropy": 0.05,
-    "description": "Heat accelerates decay. Place a COOLER near dense gates to keep them stable."
+    "description": "Build an AND circuit (output 1 only when both inputs are 1). Gates generate heat — place COOLER gates nearby to prevent thermal drift."
   },
   {
     "id": "heat-02",
@@ -109,7 +109,7 @@
     "starGates": [5, 4, 3],
     "palette": ["AND", "OR", "NOT", "XOR", "BUFFER", "COOLER"],
     "startingEntropy": 0.1,
-    "description": "A clock input alternates. XOR it with a static input. Mind the heat."
+    "description": "The output is 1 when exactly one input is 1. Build an XOR circuit from the available gates. Use COOLER gates to manage heat."
   },
   {
     "id": "marathon-01",
@@ -128,7 +128,7 @@
     "starGates": [4, 3, 2],
     "palette": ["AND", "OR", "NOT", "BUFFER", "COOLER"],
     "startingEntropy": 0.08,
-    "description": "Survival is the challenge. Add redundancy and cooling to last 20 seconds."
+    "description": "Output must always be 1 regardless of input. Build a circuit that produces constant 1 (hint: OR the two inputs, then NOT twice). Survive 20 seconds with COOLERs and BUFFERs."
   },
   {
     "id": "marathon-02",
@@ -147,7 +147,7 @@
     "starGates": [6, 5, 3],
     "palette": ["AND", "OR", "NOT", "XOR", "NAND", "BUFFER", "COOLER", "REDUNDANT"],
     "startingEntropy": 0.12,
-    "description": "Two clocks at different frequencies. Build a resilient circuit that endures."
+    "description": "Build an XOR circuit from two clock inputs. The long survival time means decay accumulates — use REDUNDANT gates for resilience and COOLERs for heat."
   },
   {
     "id": "storm-01",
@@ -166,7 +166,7 @@
     "starGates": [4, 3, 2],
     "palette": ["AND", "OR", "NOT", "XOR", "BUFFER", "COOLER"],
     "startingEntropy": 0.15,
-    "description": "High starting entropy means wires corrode fast. Use buffers to refresh signals."
+    "description": "Output is 1 when at least one input is 1, except when both are 0. Build an OR circuit. High entropy corrodes wires fast — place BUFFER gates to refresh weak signals."
   },
   {
     "id": "zen-01",
@@ -185,7 +185,7 @@
     "starGates": [2, 1, 1],
     "palette": ["AND", "OR", "NOT"],
     "startingEntropy": 0,
-    "description": "No heat, no decay. Pure logic. Find the minimal solution."
+    "description": "No heat, no decay — pure logic. Build an AND circuit using the fewest gates possible."
   },
   {
     "id": "cascade-01",
@@ -206,7 +206,7 @@
       { "gate": "BROKEN_NOT", "x": 3, "y": 2, "drift": 0.8 }
     ],
     "startingEntropy": 0.05,
-    "description": "A broken NOT gate sits in your path. Route around it or find a way to use it."
+    "description": "Output must be the opposite of the input (a NOT function). A broken NOT gate is pre-placed — it's unreliable. Build your own NOT circuit and route around it."
   },
   {
     "id": "cascade-02",
@@ -229,6 +229,6 @@
       { "gate": "BROKEN_NOT", "x": 4, "y": 3, "drift": 0.6 }
     ],
     "startingEntropy": 0.08,
-    "description": "Two broken gates block your path. XOR of the inputs gives the target. Route carefully."
+    "description": "Output is 1 when exactly one input is 1 (XOR). Two broken NOT gates block your path — route your circuit around them."
   }
 ]

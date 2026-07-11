@@ -65,6 +65,19 @@ html, body {
 .goal-pill.palette { background: rgba(74, 158, 255, 0.15); color: var(--accent-blue); border: 1px solid rgba(74, 158, 255, 0.3); }
 .goal-pill.warn { background: rgba(212, 105, 107, 0.15); color: var(--accent-red); border: 1px solid rgba(212, 105, 107, 0.3); }
 
+/* Truth table in goal banner */
+.goal-tt-wrap { flex-shrink: 0; }
+.goal-tt { display: inline-flex; flex-direction: column; gap: 1px; font-family: monospace; font-size: 11px; }
+.goal-tt-row { display: flex; gap: 1px; }
+.goal-tt-header .goal-tt-cell { color: var(--text-dim); font-weight: bold; border-bottom: 1px solid var(--border); }
+.goal-tt-cell {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 3px; font-size: 11px;
+}
+.goal-tt-cell.on { background: rgba(74, 222, 128, 0.2); color: var(--accent); }
+.goal-tt-cell.off { background: rgba(80, 120, 60, 0.1); color: var(--text-dim); }
+.goal-tt-cell.target { background: rgba(240, 168, 48, 0.15); color: var(--accent-warm); border: 1px solid rgba(240, 168, 48, 0.3); }
+
 /* Help modal content */
 .help-section { margin-bottom: 14px; }
 .help-section h3 { font-size: 14px; color: var(--accent); margin-bottom: 6px; }

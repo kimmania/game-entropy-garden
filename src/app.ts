@@ -644,17 +644,48 @@ export class App {
     const banner = document.getElementById('goal-banner')!;
     const lvl = this.state.level;
 
-    // Build truth table summary: inputs → target outputs
-    const inputLabels = lvl.inputs.map(i => i.id).join(', ');
-    const outputLabels = lvl.outputs.map(o => o.id).join(', ');
-    const targetRows = lvl.outputs[0]?.target ?? [];
-    const targetStr = targetRows.length <= 4 ? targetRows.join('') : targetRows.slice(0, 4).join('') + '…';
-
     // Count user-placed gates (exclude INPUT/OUTPUT/BROKEN_NOT)
     const gateCount = this.state.gates.filter(
       g => g.type !== 'INPUT' && g.type !== 'OUTPUT' && g.type !== 'BROKEN_NOT'
     ).length;
     const efficiencyTarget = lvl.starGates[2] ?? 0;
+
+    // Build full truth table HTML
+    let ttHtml = '<div class="goal-tt">';
+    // Header row
+    ttHtml += '<div class="goal-tt-row goal-tt-header">';
+    for (const inp of lvl.inputs) {
+      ttHtml += `<span class="goal-tt-cell">${inp.id}</span>`;
+    }
+    for (const out of lvl.outputs) {
+      ttHtml += `<span class="goal-tt-cell">${out.id}</span>`;
+    }
+    ttHtml += '</div>';
+    // Data rows — show all unique input combinations
+    const cycleLen = Math.max(
+      ...lvl.inputs.map(i => i.type === 'static' ? (i.value?.length ?? 1) : (i.period ?? 4)),
+      ...lvl.outputs.map(o => o.target.length),
+      1
+    );
+    for (let t = 0; t < cycleLen; t++) {
+      ttHtml += '<div class="goal-tt-row">';
+      for (const inp of lvl.inputs) {
+        let val: number;
+        if (inp.type === 'static') {
+          val = (inp.value ?? [0])[t % (inp.value?.length ?? 1)];
+        } else {
+          const period = inp.period ?? 4;
+          val = Math.floor(t / period) % 2;
+        }
+        ttHtml += `<span class="goal-tt-cell ${val ? 'on' : 'off'}">${val}</span>`;
+      }
+      for (const out of lvl.outputs) {
+        const val = out.target[t % out.target.length];
+        ttHtml += `<span class="goal-tt-cell target">${val}</span>`;
+      }
+      ttHtml += '</div>';
+    }
+    ttHtml += '</div>';
 
     // Build pills
     let pills = '';
@@ -664,13 +695,12 @@ export class App {
       pills += `<span class="goal-pill warn">⚡ ${Math.round(lvl.startingEntropy * 100)}% entropy</span>`;
     }
 
-    // Build description text
     const desc = lvl.description;
-    const ioStr = `Input: ${inputLabels} → Target: ${outputLabels} = [${targetStr}]`;
 
     banner.innerHTML = `
       <span class="goal-icon">🎯</span>
-      <span class="goal-text"><strong>${lvl.name}</strong> — ${desc}<br><span style="color:var(--text-dim);font-size:11px">${ioStr}</span></span>
+      <span class="goal-text"><strong>${lvl.name}</strong> — ${desc}</span>
+      <div class="goal-tt-wrap">${ttHtml}</div>
       <span class="goal-pills">${pills}</span>
     `;
   }
