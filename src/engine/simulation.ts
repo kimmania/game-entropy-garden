@@ -249,7 +249,7 @@ export function tickSimulation(state: GameState): void {
 
     newSignals.set(uid, [output]);
     gate.lastOutput = output;
-    gate.drift = Math.min(1, gate.drift + def.decayRate);
+    gate.drift = Math.min(1, gate.drift + def.decayRate * 0.5); // halved accumulation rate
   }
 
   state.signals = newSignals;
@@ -325,11 +325,14 @@ export function tickSimulation(state: GameState): void {
 
 export function checkWin(state: GameState): boolean {
   // Win when survival time is reached AND the circuit produced correct output
-  // for at least 80% of all ticks (not requiring a perfect streak).
+  // for a sufficient ratio of all ticks.
   if (state.elapsed < state.level.survivalTime) return false;
   if (state.totalTicks === 0) return false;
   const ratio = state.totalCorrect / state.totalTicks;
-  return ratio >= 0.8;
+  // Tutorial levels (0% entropy) have a softer 70% threshold;
+  // levels with entropy require 80%.
+  const threshold = state.level.startingEntropy > 0 ? 0.8 : 0.7;
+  return ratio >= threshold;
 }
 
 export function checkLoss(state: GameState): boolean {
