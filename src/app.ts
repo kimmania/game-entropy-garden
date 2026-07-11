@@ -279,6 +279,20 @@ export class App {
                 newCell.x < this.state.level.grid.width && newCell.y < this.state.level.grid.height) {
               gate.x = newCell.x;
               gate.y = newCell.y;
+              // Recalculate paths for all wires connected to this gate
+              for (const w of this.state.wires) {
+                if (w.fromGate === gate.uid || w.toGate === gate.uid) {
+                  const fg = this.state.gates.find(g => g.uid === w.fromGate);
+                  const tg = this.state.gates.find(g => g.uid === w.toGate);
+                  if (fg && tg) {
+                    w.path = [
+                      [fg.x, fg.y],
+                      [tg.x, fg.y],
+                      [tg.x, tg.y],
+                    ];
+                  }
+                }
+              }
             }
           }
           r.render();
