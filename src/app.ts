@@ -210,19 +210,23 @@ export class App {
         // If we have a pending wire and tap a different gate, complete the wire
         if (r.wireFrom && hitGate && hitGate.uid !== r.wireFrom.gateUid) {
           const def = GATE_DEFS[hitGate.type];
-          if (def.inputs > 0) {
-            this.handleCompleteWire(hitGate.uid, 0);
-            // Chain: re-arm from the target gate if it has outputs
-            if (GATE_DEFS[hitGate.type].outputs > 0) {
-              r.wireFrom = { gateUid: hitGate.uid, pin: 0 };
-            } else {
-              r.wireFrom = null;
-              r.wirePreviewTo = null;
-            }
+          if (def.inputs > 0 && this.state) {
+            // Find the next available input pin on the target gate
+            const usedPins = this.state.wires
+              .filter(w => w.toGate === hitGate.uid)
+              .map(w => w.toPin);
+            const freePin = def.inputs > 1
+              ? [0, 1].find(p => !usedPins.includes(p)) ?? 0
+              : 0;
+            this.handleCompleteWire(hitGate.uid, freePin);
           } else {
+            // Target has no inputs — can't connect here
             r.wireFrom = null;
             r.wirePreviewTo = null;
           }
+          // Don't auto-chain — let the user tap the next source manually
+          r.wireFrom = null;
+          r.wirePreviewTo = null;
           r.render();
           return;
         }
@@ -754,7 +758,7 @@ export class App {
       <div class="help-section">
         <h3>How to Play</h3>
         <p>1. <strong>Place gates</strong> — Tap a gate in the palette, then tap a grid cell to place it. <strong>Drag a placed gate</strong> to move it to a new cell.</p>
-        <p>2. <strong>Wire gates</strong> — Tap the <strong>⇄ Wire</strong> button to enter Wire mode. Tap a gate with an output to arm a wire (blue pulsing ring appears), then tap a target gate with an input to connect them. In Wire mode, the connection chains automatically so you can wire multiple gates in a row. Tap empty space to cancel. Turn Wire mode off to drag gates again.</p>
+        <p>2. <strong>Wire gates</strong> — Tap the <strong>⇄ Wire</strong> button to enter Wire mode. Tap a gate with an output to arm a wire (blue pulsing ring appears), then tap a target gate with an input to connect them. Each connection is a separate tap: arm from source, then tap target. Tap empty space to cancel. For gates with two inputs, tap the source again then tap the gate to add the second input wire. Turn Wire mode off to drag gates again.</p>
         <p>3. <strong>Run the simulation</strong> — Press Run. The circuit must produce the correct output for the full survival time shown in the goal banner.</p>
         <p>4. <strong>Decay happens</strong> — Gates drift (⚡) and wires corrode over time. Use <strong style="color:#a06ed4">BUFFER</strong> to refresh weak signals and <strong style="color:#6bcfff">COOLER</strong> to reduce heat.</p>
         <p>5. <strong>Delete</strong> — Tap a wire to remove it. Select a gate (tap it), then tap the Delete button to remove it. Input/Output gates cannot be deleted.</p>
