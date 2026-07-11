@@ -193,6 +193,7 @@ export class App {
 
     canvas.addEventListener('pointerdown', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       const cell = r.getCellFromPointer(e.clientX, e.clientY);
 
       // If armed with a gate type, place it
@@ -227,6 +228,7 @@ export class App {
           // Don't auto-chain — let the user tap the next source manually
           r.wireFrom = null;
           r.wirePreviewTo = null;
+          r.selectedGateUid = null; // clear selection so stray clicks don't delete
           r.render();
           return;
         }
@@ -236,7 +238,7 @@ export class App {
           if (def.outputs > 0) {
             r.wireFrom = { gateUid: hitGate.uid, pin: 0 };
           }
-          r.selectedGateUid = hitGate.uid;
+          r.selectedGateUid = null; // don't select in wire mode
           r.render();
           return;
         }
