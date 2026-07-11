@@ -18,7 +18,7 @@ export class Renderer {
   armedGateType: string | null = null;
   wireFrom: { gateUid: number; pin: number } | null = null;
   wirePreviewTo: { x: number; y: number } | null = null;
-  hoverCell: { x: number; y: number } | null = null;
+  hoverGateUid: number | null = null;
   hoverWireUid: number | null = null;
 
   // callbacks
@@ -60,6 +60,7 @@ export class Renderer {
   }
 
   private _state: GameState | null = null;
+  _lastPointer: { x: number; y: number } | null = null;
 
   setState(state: GameState): void {
     this._state = state;
@@ -305,13 +306,30 @@ export class Renderer {
   }
 
   private drawHover(): void {
-    if (!this._state || !this.hoverCell) return;
-    if (this.hoverCell.x < 0 || this.hoverCell.y < 0) return;
-    if (this.hoverCell.x >= this._state.level.grid.width || this.hoverCell.y >= this._state.level.grid.height) return;
+    if (!this._state) return;
     const ctx = this.ctx;
-    const pos = this.toScreen(this.hoverCell.x, this.hoverCell.y);
     const sz = this.cellSize * this.zoom;
-    ctx.strokeStyle = this.armedGateType ? 'rgba(120, 200, 255, 0.6)' : 'rgba(255, 255, 255, 0.2)';
+
+    // If armed with a gate type, show hover at the grid cell under the pointer
+    if (this.armedGateType && this._lastPointer) {
+      const cell = this.toGrid(this._lastPointer.x, this._lastPointer.y);
+      if (cell.x >= 0 && cell.y >= 0 && cell.x < this._state.level.grid.width && cell.y < this._state.level.grid.height) {
+        const pos = this.toScreen(cell.x, cell.y);
+        ctx.strokeStyle = 'rgba(120, 200, 255, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(pos.x + 2, pos.y + 2, sz - 4, sz - 4);
+        ctx.setLineDash([]);
+      }
+      return;
+    }
+
+    // Otherwise highlight the gate under the pointer
+    if (this.hoverGateUid === null) return;
+    const gate = this._state.gates.find(g => g.uid === this.hoverGateUid);
+    if (!gate) return;
+    const pos = this.toScreen(gate.x, gate.y);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
     ctx.lineWidth = 2;
     ctx.setLineDash([4, 4]);
     ctx.strokeRect(pos.x + 2, pos.y + 2, sz - 4, sz - 4);

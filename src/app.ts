@@ -183,7 +183,6 @@ export class App {
     canvas.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       const cell = r.getCellFromPointer(e.clientX, e.clientY);
-      r.hoverCell = cell;
 
       // If armed with a gate type, place it
       if (this.armedGate && this.state) {
@@ -239,9 +238,14 @@ export class App {
     canvas.addEventListener('pointermove', (e) => {
       if (!this.state) return;
       const rect = canvas.getBoundingClientRect();
-      r.hoverCell = r.getCellFromPointer(e.clientX, e.clientY);
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      r._lastPointer = { x: px, y: py };
+      // Update gate hover using distance-based detection
+      const hoverGate = r.getGateFromPointer(e.clientX, e.clientY);
+      r.hoverGateUid = hoverGate ? hoverGate.uid : null;
       if (r.wireFrom) {
-        r.wirePreviewTo = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        r.wirePreviewTo = { x: px, y: py };
       }
       r.render();
     });
