@@ -155,7 +155,14 @@ export class App {
     this.updateGoalBanner();
     this.updateTruthTable();
     this.updateStatus();
-    this.renderer?.render();
+
+    // Defer render + resize to next frame so the browser has laid out game-view
+    requestAnimationFrame(() => {
+      if (this.renderer) {
+        this.renderer.resize();
+        this.renderer.render();
+      }
+    });
 
     if (!this.save.hasSeenHelp) this.showHelp();
   }

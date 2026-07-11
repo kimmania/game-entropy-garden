@@ -33,7 +33,8 @@ export class Renderer {
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
-    this.resize();
+    // Don't resize in constructor — caller should call resize()
+    // after the browser has laid out the canvas parent
   }
 
   resize(): void {
@@ -67,7 +68,7 @@ export class Renderer {
 
   setState(state: GameState): void {
     this._state = state;
-    this.resize();
+    // Don't resize here — caller controls timing via resize()
   }
 
   private _stateGrid(): { width: number; height: number } | null {
