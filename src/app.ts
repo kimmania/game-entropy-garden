@@ -716,15 +716,13 @@ export class App {
   // === Save ===
   private saveCircuitNow(): void {
     if (!this.state) return;
+    // Save user-placed gates (not INPUT/OUTPUT which are auto-created)
     const gates = this.state.gates
       .filter(g => g.type !== 'INPUT' && g.type !== 'OUTPUT')
       .map(g => ({ type: g.type, x: g.x, y: g.y, rotation: g.rotation }));
+    // Save ALL wires with their UIDs — UIDs are deterministic:
+    // createGameState assigns INPUT=1,2.. OUTPUT=N+1,N+2.. then addGate continues sequentially
     const wires = this.state.wires
-      .filter(w => {
-        const fg = this.state!.gates.find(g => g.uid === w.fromGate);
-        const tg = this.state!.gates.find(g => g.uid === w.toGate);
-        return fg && tg && fg.type !== 'OUTPUT' && tg.type !== 'INPUT';
-      })
       .map(w => ({ fromGate: w.fromGate, fromPin: w.fromPin, toGate: w.toGate, toPin: w.toPin, path: w.path }));
     saveCircuit(this.state.level.id, { levelId: this.state.level.id, gates, wires, starsEarned: 0, bestSurvival: 0 }, this.save);
   }

@@ -5,7 +5,7 @@ export default defineConfig({
   base: '/game-entropy-garden/',
   plugins: [
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       manifest: {
         name: 'Entropy Garden',
         short_name: 'Entropy Garden',
