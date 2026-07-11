@@ -345,6 +345,9 @@ export class App {
     });
 
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    // Suppress click events on canvas — on iPad, click fires after pointerup
+    // and can hit palette buttons if the tap position overlaps them
+    canvas.addEventListener('click', (e) => e.stopPropagation());
   }
 
   // === Gate placement ===
@@ -390,7 +393,7 @@ export class App {
     addWire(this.state, from.gateUid, from.pin, toGateUid, toPin, path);
     this.renderer.wireFrom = null;
     this.renderer.wirePreviewTo = null;
-    this.saveCircuitNow();
+    // Don't save here — save on pointerup to avoid any side effects
     this.renderer.render();
   }
 
