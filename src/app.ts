@@ -202,51 +202,63 @@ export class App {
         return;
       }
 
-      // Use distance-based hit detection (same approach as game-patchwork)
+      // Use distance-based hit detection
       const hitGate = r.getGateFromPointer(e.clientX, e.clientY);
 
-      // If we have a pending wire and tap a different gate, complete the wire
-      if (r.wireFrom && this.state) {
-        if (hitGate && hitGate.uid !== r.wireFrom.gateUid) {
+      // In wire mode: handle wire connect/disconnect flow
+      if (this.wireMode) {
+        // If we have a pending wire and tap a different gate, complete the wire
+        if (r.wireFrom && hitGate && hitGate.uid !== r.wireFrom.gateUid) {
           const def = GATE_DEFS[hitGate.type];
           if (def.inputs > 0) {
             this.handleCompleteWire(hitGate.uid, 0);
-            // In wire mode, immediately arm from the target gate if it has outputs
-            if (this.wireMode) {
-              const targetDef = GATE_DEFS[hitGate.type];
-              if (targetDef.outputs > 0) {
-                r.wireFrom = { gateUid: hitGate.uid, pin: 0 };
-                this.toast('Tap next gate to connect');
-              } else {
-                r.wireFrom = null;
-                r.wirePreviewTo = null;
-              }
+            // Chain: re-arm from the target gate if it has outputs
+            if (GATE_DEFS[hitGate.type].outputs > 0) {
+              r.wireFrom = { gateUid: hitGate.uid, pin: 0 };
+            } else {
+              r.wireFrom = null;
+              r.wirePreviewTo = null;
             }
           } else {
-            // Target has no inputs (e.g. INPUT gate) — cancel wire
             r.wireFrom = null;
             r.wirePreviewTo = null;
           }
           r.render();
           return;
         }
-        // Tapped the same gate — keep wire armed but allow selection of this gate
-        // (don't cancel — the user might be trying to re-select)
-        r.wireFrom = null;
-        r.wirePreviewTo = null;
-        // Fall through to handle the tap normally
+        // No pending wire — start a new one from this gate
+        if (hitGate) {
+          const def = GATE_DEFS[hitGate.type];
+          if (def.outputs > 0) {
+            r.wireFrom = { gateUid: hitGate.uid, pin: 0 };
+          }
+          r.selectedGateUid = hitGate.uid;
+          r.render();
+          return;
+        }
+        // Tapped empty space — cancel any pending wire
+        if (r.wireFrom) {
+          r.wireFrom = null;
+          r.wirePreviewTo = null;
+          r.render();
+          return;
+        }
+        // Check wire deletion
+        const wire = r.getWireFromPointer(e.clientX, e.clientY);
+        if (wire && this.state) {
+          removeWire(this.state, wire.uid);
+          this.saveCircuitNow();
+          r.render();
+          return;
+        }
+        return;
       }
 
-      // Check if tapping a gate — select it, start wire (if wire mode), or begin drag
+      // Not in wire mode: select gate, start drag, or delete wire
       if (hitGate) {
         r.selectedGateUid = hitGate.uid;
-        const def = GATE_DEFS[hitGate.type];
-        if (this.wireMode && def.outputs > 0) {
-          r.wireFrom = { gateUid: hitGate.uid, pin: 0 };
-          this.toast('Tap a gate with an input to connect');
-        }
-        // Start drag if this is a movable gate (only when not in wire mode)
-        if (!this.wireMode && hitGate.type !== 'INPUT' && hitGate.type !== 'OUTPUT' && hitGate.type !== 'BROKEN_NOT') {
+        // Start drag if movable
+        if (hitGate.type !== 'INPUT' && hitGate.type !== 'OUTPUT' && hitGate.type !== 'BROKEN_NOT') {
           this._dragState = {
             gateUid: hitGate.uid,
             startX: e.clientX,
@@ -282,35 +294,25 @@ export class App {
       const hoverGate = r.getGateFromPointer(e.clientX, e.clientY);
       r.hoverGateUid = hoverGate ? hoverGate.uid : null;
 
-      // Handle drag-to-move
-      if (this._dragState && this.state) {
+      // Handle drag-to-move (only when NOT in wire mode)
+      if (!this.wireMode && this._dragState && this.state) {
         const dist = Math.hypot(e.clientX - this._dragState.startX, e.clientY - this._dragState.startY);
         if (dist > 10) {
           this._dragState.moved = true;
-          // Cancel wire arm if we're dragging
-          r.wireFrom = null;
-          r.wirePreviewTo = null;
-          // Move gate to new cell
           const newCell = r.getCellFromPointer(e.clientX, e.clientY);
           const gate = this.state.gates.find(g => g.uid === this._dragState!.gateUid);
           if (gate) {
-            // Check target cell is empty or same gate
             const occupied = this.state.gates.some(g => g.uid !== gate.uid && g.x === newCell.x && g.y === newCell.y);
             if (!occupied && newCell.x >= 0 && newCell.y >= 0 &&
                 newCell.x < this.state.level.grid.width && newCell.y < this.state.level.grid.height) {
               gate.x = newCell.x;
               gate.y = newCell.y;
-              // Recalculate paths for all wires connected to this gate
               for (const w of this.state.wires) {
                 if (w.fromGate === gate.uid || w.toGate === gate.uid) {
                   const fg = this.state.gates.find(g => g.uid === w.fromGate);
                   const tg = this.state.gates.find(g => g.uid === w.toGate);
                   if (fg && tg) {
-                    w.path = [
-                      [fg.x, fg.y],
-                      [tg.x, fg.y],
-                      [tg.x, tg.y],
-                    ];
+                    w.path = [[fg.x, fg.y], [tg.x, fg.y], [tg.x, tg.y]];
                   }
                 }
               }
@@ -321,6 +323,7 @@ export class App {
         }
       }
 
+      // Update wire preview if armed
       if (r.wireFrom) {
         r.wirePreviewTo = { x: px, y: py };
       }
@@ -328,17 +331,10 @@ export class App {
     });
 
     canvas.addEventListener('pointerup', () => {
-      // If we were dragging a gate and it moved, save
       if (this._dragState?.moved && this.state) {
         this.saveCircuitNow();
       }
       this._dragState = null;
-
-      // Keep wire preview visible if wireFrom is still armed
-      // (don't clear it on pointerup — the user needs to tap a second gate)
-      if (!r.wireFrom) {
-        r.wirePreviewTo = null;
-      }
       r.render();
     });
 
