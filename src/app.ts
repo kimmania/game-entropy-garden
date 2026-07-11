@@ -128,6 +128,8 @@ export class App {
   startLevel(levelId: string): void {
     const level = this.levels.find(l => l.id === levelId);
     if (!level) return;
+    // Stop any running simulation from the previous level
+    this.stopSimulation();
     document.getElementById('map-view')!.style.display = 'none';
     document.getElementById('game-view')!.style.display = '';
     document.getElementById('level-name')!.textContent = level.name;
@@ -492,6 +494,8 @@ export class App {
   private simTick(): void {
     if (!this.state || !this.renderer) return;
     if (this.state.simState !== 'running') return;
+    // Guard: if the timer was cleared but callback still queued
+    if (!this.simTimer) return;
     tickSimulation(this.state);
     this.renderer.render();
     this.updateGoalBanner();
