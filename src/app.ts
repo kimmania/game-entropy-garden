@@ -14,6 +14,7 @@ export class App {
   private canvas: HTMLCanvasElement | null = null;
   private simTimer: number | null = null;
   private armedGate: GateType | null = null;
+  private _dragState: { gateUid: number; startX: number; startY: number; moved: boolean } | null = null;
 
   static async bootstrap(): Promise<void> {
     const app = new App();
@@ -208,18 +209,29 @@ export class App {
           r.render();
           return;
         }
-        // Tapped the same gate or empty space — cancel pending wire
+        // Tapped the same gate — keep wire armed but allow selection of this gate
+        // (don't cancel — the user might be trying to re-select)
         r.wireFrom = null;
         r.wirePreviewTo = null;
         // Fall through to handle the tap normally
       }
 
-      // Check if tapping a gate — start wire from its output
+      // Check if tapping a gate — select it and start wire from its output
       if (hitGate) {
         r.selectedGateUid = hitGate.uid;
         const def = GATE_DEFS[hitGate.type];
         if (def.outputs > 0) {
           r.wireFrom = { gateUid: hitGate.uid, pin: 0 };
+          this.toast('Tap a gate with an input to connect');
+        }
+        // Start drag if this is a movable gate
+        if (hitGate.type !== 'INPUT' && hitGate.type !== 'OUTPUT' && hitGate.type !== 'BROKEN_NOT') {
+          this._dragState = {
+            gateUid: hitGate.uid,
+            startX: e.clientX,
+            startY: e.clientY,
+            moved: false,
+          };
         }
         r.render();
         return;
@@ -233,6 +245,10 @@ export class App {
         r.render();
         return;
       }
+
+      // Tapped empty space — deselect
+      r.selectedGateUid = null;
+      r.render();
     });
 
     canvas.addEventListener('pointermove', (e) => {
@@ -244,6 +260,32 @@ export class App {
       // Update gate hover using distance-based detection
       const hoverGate = r.getGateFromPointer(e.clientX, e.clientY);
       r.hoverGateUid = hoverGate ? hoverGate.uid : null;
+
+      // Handle drag-to-move
+      if (this._dragState && this.state) {
+        const dist = Math.hypot(e.clientX - this._dragState.startX, e.clientY - this._dragState.startY);
+        if (dist > 10) {
+          this._dragState.moved = true;
+          // Cancel wire arm if we're dragging
+          r.wireFrom = null;
+          r.wirePreviewTo = null;
+          // Move gate to new cell
+          const newCell = r.getCellFromPointer(e.clientX, e.clientY);
+          const gate = this.state.gates.find(g => g.uid === this._dragState!.gateUid);
+          if (gate) {
+            // Check target cell is empty or same gate
+            const occupied = this.state.gates.some(g => g.uid !== gate.uid && g.x === newCell.x && g.y === newCell.y);
+            if (!occupied && newCell.x >= 0 && newCell.y >= 0 &&
+                newCell.x < this.state.level.grid.width && newCell.y < this.state.level.grid.height) {
+              gate.x = newCell.x;
+              gate.y = newCell.y;
+            }
+          }
+          r.render();
+          return;
+        }
+      }
+
       if (r.wireFrom) {
         r.wirePreviewTo = { x: px, y: py };
       }
@@ -251,8 +293,17 @@ export class App {
     });
 
     canvas.addEventListener('pointerup', () => {
-      // Wire completion on pointerup is handled in pointerdown
-      r.wirePreviewTo = null;
+      // If we were dragging a gate and it moved, save
+      if (this._dragState?.moved && this.state) {
+        this.saveCircuitNow();
+      }
+      this._dragState = null;
+
+      // Keep wire preview visible if wireFrom is still armed
+      // (don't clear it on pointerup — the user needs to tap a second gate)
+      if (!r.wireFrom) {
+        r.wirePreviewTo = null;
+      }
       r.render();
     });
 
@@ -655,11 +706,12 @@ export class App {
 
       <div class="help-section">
         <h3>How to Play</h3>
-        <p>1. <strong>Place gates</strong> — Tap a gate in the palette, then tap a grid cell to place it.</p>
-        <p>2. <strong>Wire gates</strong> — Tap a gate's output pin (right side dot), then tap another gate's input to connect them.</p>
+        <p>1. <strong>Place gates</strong> — Tap a gate in the palette, then tap a grid cell to place it. <strong>Drag a placed gate</strong> to move it to a new cell.</p>
+        <p>2. <strong>Wire gates</strong> — Tap a gate with an output to arm a wire (a blue pulsing ring appears). Then tap a target gate with an input to connect them. Tap empty space to cancel.</p>
         <p>3. <strong>Run the simulation</strong> — Press Run. The circuit must produce the correct output for the full survival time shown in the goal banner.</p>
         <p>4. <strong>Decay happens</strong> — Gates drift (⚡) and wires corrode over time. Use <strong style="color:#a06ed4">BUFFER</strong> to refresh weak signals and <strong style="color:#6bcfff">COOLER</strong> to reduce heat.</p>
-        <p>5. <strong>Delete</strong> — Tap a wire to remove it. Select a gate, then tap Delete to remove it.</p>
+        <p>5. <strong>Delete</strong> — Tap a wire to remove it. Select a gate (tap it), then tap the Delete button to remove it. Input/Output gates cannot be deleted.</p>
+        <p>6. <strong>Reset</strong> — Clears all user-placed gates and wires, restoring the board to its initial state.</p>
       </div>
 
       <div class="help-section">

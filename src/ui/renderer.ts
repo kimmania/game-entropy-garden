@@ -63,6 +63,7 @@ export class Renderer {
 
   private _state: GameState | null = null;
   _lastPointer: { x: number; y: number } | null = null;
+  private _pulseRaf: number | null = null;
 
   setState(state: GameState): void {
     this._state = state;
@@ -148,6 +149,25 @@ export class Renderer {
     this.drawWires();
     this.drawGates();
     this.drawHover();
+    this.updatePulseLoop();
+  }
+
+  private updatePulseLoop(): void {
+    const needsPulse = !!this.wireFrom;
+    if (needsPulse && this._pulseRaf === null) {
+      const tick = () => {
+        if (this.wireFrom) {
+          this.render();
+          this._pulseRaf = requestAnimationFrame(tick);
+        } else {
+          this._pulseRaf = null;
+        }
+      };
+      this._pulseRaf = requestAnimationFrame(tick);
+    } else if (!needsPulse && this._pulseRaf !== null) {
+      cancelAnimationFrame(this._pulseRaf);
+      this._pulseRaf = null;
+    }
   }
 
   private drawGrid(): void {
@@ -257,6 +277,9 @@ export class Renderer {
     if (!this._state) return;
     const ctx = this.ctx;
     const sz = this.cellSize * this.zoom * 0.85;
+    // Pulse animation for armed wire source
+    const pulseT = (Date.now() % 1000) / 1000;
+    const pulseAlpha = 0.3 + 0.3 * Math.sin(pulseT * Math.PI * 2);
     for (const gate of this._state.gates) {
       const def = GATE_DEFS[gate.type];
       const pos = this.toScreen(gate.x, gate.y);
@@ -272,6 +295,18 @@ export class Renderer {
       this.roundRect(cx - sz / 2, cy - sz / 2, sz, sz, r);
       ctx.fill();
       ctx.stroke();
+
+      // pulsing ring on armed wire source
+      if (this.wireFrom && this.wireFrom.gateUid === gate.uid) {
+        ctx.strokeStyle = `rgba(120, 200, 255, ${pulseAlpha})`;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([6, 4]);
+        const ring = sz * 0.65;
+        ctx.beginPath();
+        ctx.arc(cx, cy, ring, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
 
       // symbol
       ctx.fillStyle = def.color;
