@@ -96,6 +96,7 @@ export interface GameState {
   totalCorrect: number;  // total correct ticks this run
   totalTicks: number;     // total ticks this run
   pinnedInputs: (number | null)[]; // when non-null, input[i] is forced to this value (probe/pin mode), bypassing its static/clock cycle
+  provenCombos: string[];  // signatures of input-combos already satisfied (truth-table checklist)
   seed: number;
   failures: string[];    // recent failure messages
   nextGateUid: number;

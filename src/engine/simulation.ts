@@ -59,6 +59,7 @@ export function createGameState(level: LevelDef, seed: number): GameState {
     totalCorrect: 0,
     totalTicks: 0,
     pinnedInputs: [],
+    provenCombos: [],
     seed,
     failures: [],
     nextGateUid: nextUid,
@@ -285,6 +286,9 @@ export function tickSimulation(state: GameState): void {
   }
   if (allCorrect) {
     state.totalCorrect++;
+    // Truth-table checklist (#3): record this input combination as proven.
+    const sig = inputValues.join(',');
+    if (!state.provenCombos.includes(sig)) state.provenCombos.push(sig);
   }
   state.totalTicks++;
 
@@ -373,6 +377,7 @@ export function resetSimulation(state: GameState): void {
   state.targetOutput = [];
   state.totalCorrect = 0;
   state.totalTicks = 0;
+  state.provenCombos = [];
   state.failures = [];
 
   // Reset gate drift to starting entropy

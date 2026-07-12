@@ -77,6 +77,13 @@ html, body {
 .goal-tt-cell.on { background: rgba(74, 222, 128, 0.2); color: var(--accent); }
 .goal-tt-cell.off { background: rgba(80, 120, 60, 0.1); color: var(--text-dim); }
 .goal-tt-cell.target { background: rgba(240, 168, 48, 0.15); color: var(--accent-warm); border: 1px solid rgba(240, 168, 48, 0.3); }
+/* #3 truth-table checklist: status indicator + proven/active row styling */
+.goal-tt-status { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 18px; font-size: 11px; color: var(--text-dim); }
+.goal-tt-status.done { color: var(--accent); font-weight: bold; }
+.goal-tt-status.active { color: var(--accent-warm); font-weight: bold; }
+.goal-tt-row.goal-tt-proven { background: rgba(74, 222, 128, 0.08); border-radius: 3px; }
+.goal-tt-row.goal-tt-active { background: rgba(240, 168, 48, 0.12); outline: 1px solid rgba(240, 168, 48, 0.4); border-radius: 3px; }
+
 
 /* Help modal content */
 .help-section { margin-bottom: 14px; }

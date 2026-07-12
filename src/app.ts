@@ -812,7 +812,26 @@ export class App {
       1
     );
     for (let t = 0; t < cycleLen; t++) {
-      ttHtml += '<div class="goal-tt-row">';
+      ttHtml += '<div class="goal-tt-row';
+      // #3 truth-table checklist: mark proven + the row currently under evaluation
+      let sig = '';
+      for (const inp of lvl.inputs) {
+        if (inp.type === 'static') {
+          sig += (inp.value ?? [0])[t % (inp.value?.length ?? 1)];
+        } else {
+          const period = inp.period ?? 4;
+          sig += String(Math.floor(t / period) % 2);
+        }
+        sig += ',';
+      }
+      sig = sig.replace(/,$/, '');
+      const isProven = this.state.provenCombos.includes(sig);
+      const isActive = this.state.inputValues.join(',') === sig;
+      if (isProven) ttHtml += ' goal-tt-proven';
+      if (isActive) ttHtml += ' goal-tt-active';
+      ttHtml += '">';
+      // status indicator cell
+      ttHtml += `<span class="goal-tt-status ${isProven ? 'done' : (isActive ? 'active' : '')}">${isProven ? '✓' : (isActive ? '▶' : '○')}</span>`;
       for (const inp of lvl.inputs) {
         let val: number;
         if (inp.type === 'static') {
