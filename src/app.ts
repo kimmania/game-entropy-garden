@@ -1,4 +1,4 @@
-import type { GameState, LevelDef, GateType, SaveData } from './engine/types.js';
+import type { GameState, LevelDef, GateType, SaveData, PlacedGate } from './engine/types.js';
 import { GATE_DEFS, TICKS_PER_SECOND } from './engine/gates.js';
 import { buildCircuitGraph, hasCycle } from './engine/circuit.js';
 import { createGameState, addGate, addWire, removeGate, removeWire, rotateGate, tickSimulation, resetSimulation, checkWin, checkLoss, canPlaceGate } from './engine/simulation.js';
@@ -200,29 +200,16 @@ export class App {
 
       // In wire mode: handle wire connect/disconnect flow
       if (this.wireMode) {
-        // If we have a pending wire and tap a different gate, complete the wire
+        // Complete a pending wire if we released/tapped over a valid target.
+        // This must run on BOTH pointerdown and pointerup: a tap-tap gesture
+        // completes on the 2nd tap (pointerdown), while a drag gesture
+        // (common on touch) completes when the finger lifts on the target
+        // (pointerup). Without the pointerup path, a drag leaves wireFrom
+        // dangling and a later tap silently completes it to whatever gate
+        // happens to be under that tap — e.g. a wire that "jumps" to the
+        // OUTPUT instead of stopping at the gate you dragged to.
         if (r.wireFrom && hitGate && hitGate.uid !== r.wireFrom.gateUid) {
-          const def = GATE_DEFS[hitGate.type];
-          if (def.inputs > 0 && this.state) {
-            // Find the next available input pin on the target gate
-            const usedPins = this.state.wires
-              .filter(w => w.toGate === hitGate.uid)
-              .map(w => w.toPin);
-            const freePin = def.inputs > 1
-              ? [0, 1].find(p => !usedPins.includes(p)) ?? 0
-              : 0;
-            this.handleCompleteWire(hitGate.uid, freePin);
-          } else {
-            // Target has no inputs — can't connect here
-            r.wireFrom = null;
-            r.wirePreviewTo = null;
-          }
-          // Don't auto-chain — let the user tap the next source manually
-          r.wireFrom = null;
-          r.wirePreviewTo = null;
-          r.selectedGateUid = null; // clear selection so stray clicks don't delete
-          r.render();
-          return;
+          if (this.tryCompleteWireAt(hitGate)) return;
         }
         // No pending wire — start a new one from this gate
         if (hitGate) {
@@ -328,7 +315,34 @@ export class App {
       r.render();
     });
 
-    canvas.addEventListener('pointerup', () => {
+    canvas.addEventListener('pointerup', (e) => {
+      // In wire mode, finishing a drag on a valid target completes the wire.
+      // This is what makes drag-to-wire work on touch/pen: the drag's
+      // pointerdown sets wireFrom, and releasing here finishes the connection
+      // at the gate under the finger — instead of leaving wireFrom dangling
+      // and letting a later tap silently complete it to the wrong gate.
+      if (this.wireMode && r.wireFrom) {
+        const hit = r.getGateFromPointer(e.clientX, e.clientY);
+        if (hit && hit.uid !== r.wireFrom.gateUid) {
+          if (this.tryCompleteWireAt(hit)) {
+            this._dragState = null;
+            return;
+          }
+        }
+        // Released over empty space, or over a gate that isn't a valid target
+        // (e.g. the same source gate — a tap, not a drag) — keep the pending
+        // wire so the next tap can still complete it. Only CANCEL when the
+        // release is over genuinely empty space (no gate under the finger),
+        // which means the drag was abandoned. This preserves tap-tap wiring
+        // while still clearing wires that were dragged into the void.
+        if (!hit) {
+          r.wireFrom = null;
+          r.wirePreviewTo = null;
+        }
+        r.render();
+        this._dragState = null;
+        return;
+      }
       if (this._dragState?.moved && this.state) {
         this.saveCircuitNow();
       }
@@ -358,6 +372,36 @@ export class App {
   }
 
   // === Wire drawing ===
+  // Try to complete the pending wire (this.renderer.wireFrom) at the gate
+  // currently under the pointer. Returns true if the event was consumed
+  // (wire completed or pending wire cancelled). Shared by the pointerdown
+  // (tap-tap) and pointerup (drag) paths so both gestures work.
+  private tryCompleteWireAt(hitGate: PlacedGate): boolean {
+    const r = this.renderer;
+    if (!r || !this.state) return false;
+    const def = GATE_DEFS[hitGate.type];
+    if (def.inputs > 0) {
+      // Find the next available input pin on the target gate
+      const usedPins = this.state.wires
+        .filter(w => w.toGate === hitGate.uid)
+        .map(w => w.toPin);
+      const freePin = def.inputs > 1
+        ? [0, 1].find(p => !usedPins.includes(p)) ?? 0
+        : 0;
+      this.handleCompleteWire(hitGate.uid, freePin);
+    } else {
+      // Target has no inputs — can't connect here; cancel the pending wire
+      r.wireFrom = null;
+      r.wirePreviewTo = null;
+    }
+    // Don't auto-chain — let the user tap the next source manually
+    r.wireFrom = null;
+    r.wirePreviewTo = null;
+    r.selectedGateUid = null; // clear selection so stray taps don't delete
+    r.render();
+    return true;
+  }
+
   private handleCompleteWire(toGateUid: number, toPin: number): void {
     if (!this.state || !this.renderer?.wireFrom) return;
     const from = this.renderer.wireFrom;
