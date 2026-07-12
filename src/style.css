@@ -178,6 +178,36 @@ html, body {
 .status-bar { display: flex; gap: 12px; font-size: 11px; color: var(--text-dim); align-items: center; }
 .status-bar .val { color: var(--text); font-weight: 600; }
 
+/* Pin panel (#1): freeze inputs to probe a single case */
+.pin-panel {
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+  padding: 6px 8px; background: var(--bg-card);
+  border: 1px solid var(--accent); border-radius: var(--radius);
+}
+.pin-label { font-size: 11px; color: var(--text-dim); }
+.pin-chip {
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  border-radius: var(--radius); padding: 6px 10px; font-size: 12px; cursor: pointer;
+  min-height: 32px;
+}
+.pin-chip.on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+.pin-chip.off { background: rgba(80, 120, 60, 0.2); color: var(--text-dim); }
+.pin-hint { font-size: 10px; color: var(--text-dim); }
+
+/* Explain panel (#2): plain-language readout of a tapped gate */
+.explain-panel {
+  min-height: 34px; padding: 6px 10px; font-size: 12px; line-height: 1.4;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--text);
+}
+.explain-hint { color: var(--text-dim); }
+.explain-title { color: var(--accent); font-weight: 600; margin-right: 6px; }
+.sig { display: inline-block; min-width: 14px; text-align: center; padding: 0 3px; border-radius: 2px; font-family: monospace; }
+.sig.on { background: var(--accent); color: var(--bg); }
+.sig.off { background: rgba(80, 120, 60, 0.2); color: var(--text-dim); }
+.match { color: var(--accent); font-weight: 600; }
+.miss { color: var(--accent-red); font-weight: 600; }
+
 /* Modal overlay */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75);

@@ -1,7 +1,7 @@
 import type { GameState, LevelDef, GateType, SaveData, PlacedGate } from './engine/types.js';
 import { GATE_DEFS, TICKS_PER_SECOND } from './engine/gates.js';
 import { buildCircuitGraph, hasCycle } from './engine/circuit.js';
-import { createGameState, addGate, addWire, removeGate, removeWire, rotateGate, tickSimulation, resetSimulation, checkWin, checkLoss, canPlaceGate } from './engine/simulation.js';
+import { createGameState, addGate, addWire, removeGate, removeWire, rotateGate, tickSimulation, resetSimulation, checkWin, checkLoss, canPlaceGate, setPinnedInput } from './engine/simulation.js';
 import { loadSave, saveSave, loadCircuit, saveCircuit, completeLevel, unlockLevel, isCompleted, isUnlocked } from './engine/storage.js';
 import { Renderer } from './ui/renderer.js';
 
@@ -71,6 +71,8 @@ export class App {
           <div class="canvas-wrap"><canvas id="board"></canvas></div>
           <div class="bottom-panel">
             <div class="truth-table" id="truth-table"></div>
+            <div class="pin-panel" id="pin-panel" style="display:none"></div>
+            <div class="explain-panel" id="explain-panel"></div>
             <div class="status-bar" id="status-bar"></div>
             <div class="palette" id="palette"></div>
             <div class="controls" id="controls"></div>
@@ -240,7 +242,8 @@ export class App {
           if (def.outputs > 0) {
             r.wireFrom = { gateUid: hitGate.uid, pin: 0 };
           }
-          r.selectedGateUid = null; // don't select in wire mode
+          r.selectedGateUid = hitGate.uid;
+          this.updateExplainPanel(hitGate.uid);
           r.render();
           return;
         }
@@ -265,6 +268,7 @@ export class App {
       // Not in wire mode: select gate, start drag, or delete wire
       if (hitGate) {
         r.selectedGateUid = hitGate.uid;
+        this.updateExplainPanel(hitGate.uid);
         // Start drag if movable
         if (hitGate.type !== 'INPUT' && hitGate.type !== 'OUTPUT' && hitGate.type !== 'BROKEN_NOT') {
           this._dragState = {
@@ -533,17 +537,68 @@ export class App {
   private buildControls(): void {
     const controls = document.getElementById('controls')!;
     controls.innerHTML = `
+      <button class="ctrl-btn" id="btn-pin">📌 Pin</button>
       <button class="ctrl-btn primary" id="btn-run">▶ Run</button>
       <button class="ctrl-btn" id="btn-step">⏭ Step</button>
       <button class="ctrl-btn" id="btn-reset">↺ Reset</button>
       <button class="ctrl-btn" id="btn-clear">🗑 Clear</button>
     `;
+    document.getElementById('btn-pin')!.onclick = () => this.togglePin();
     document.getElementById('btn-run')!.onclick = () => this.toggleRun();
     document.getElementById('btn-step')!.onclick = () => this.stepSim();
     document.getElementById('btn-reset')!.onclick = () => this.resetSim();
     document.getElementById('btn-clear')!.onclick = () => this.clearBoard();
   }
 
+  private togglePin(): void {
+    if (!this.state) return;
+    const panel = document.getElementById('pin-panel')!;
+    const btn = document.getElementById('btn-pin')!;
+    const on = panel.style.display === 'none' || !panel.style.display;
+    if (on) {
+      panel.style.display = '';
+      btn.classList.add('armed');
+      this.renderPinPanel();
+      // Freshly pin inputs to their current auto value so the row is stable.
+      for (let i = 0; i < this.state.level.inputs.length; i++) {
+        const cur = this.state.inputValues[i] ?? 0;
+        setPinnedInput(this.state, i, cur);
+      }
+      this.toast('Pin on — set inputs, then Step to probe one case');
+    } else {
+      panel.style.display = 'none';
+      btn.classList.remove('armed');
+      if (this.state) this.state.pinnedInputs = [];
+      this.renderer?.render();
+    }
+  }
+
+  // Render per-input 0/1 toggle chips used while Pin mode is on.
+  private renderPinPanel(): void {
+    if (!this.state) return;
+    const panel = document.getElementById('pin-panel')!;
+    let html = '<span class="pin-label">Pin inputs:</span>';
+    for (let i = 0; i < this.state.level.inputs.length; i++) {
+      const inp = this.state.level.inputs[i];
+      const val = this.state.pinnedInputs[i] ?? (this.state.inputValues[i] ?? 0);
+      const label = inp.id || `In${i}`;
+      html += `<button class="pin-chip ${val ? 'on' : 'off'}" data-inp="${i}">${label}=${val}</button>`;
+    }
+    html += '<span class="pin-hint">Step to advance one tick with these frozen</span>';
+    panel.innerHTML = html;
+    panel.querySelectorAll<HTMLElement>('.pin-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        if (!this.state) return;
+        const idx = Number(chip.dataset.inp);
+        const cur = this.state.pinnedInputs[idx] ?? (this.state.inputValues[idx] ?? 0);
+        const next = cur ? 0 : 1;
+        setPinnedInput(this.state, idx, next);
+        this.renderPinPanel();
+        this.renderer?.render();
+        this.updateExplainPanel(this.renderer?.selectedGateUid ?? null);
+      });
+    });
+  }
   private toggleRun(): void {
     if (!this.state) return;
     const btn = document.getElementById('btn-run')!;
@@ -585,6 +640,7 @@ export class App {
     this.updateGoalBanner();
     this.updateTruthTable();
     this.updateStatus();
+    this.updateExplainPanel(this.renderer?.selectedGateUid ?? null);
 
     if (checkWin(this.state)) {
       this.stopSimulation();
@@ -602,6 +658,7 @@ export class App {
     this.updateGoalBanner();
     this.updateTruthTable();
     this.updateStatus();
+    this.updateExplainPanel(this.renderer.selectedGateUid ?? null);
   }
 
   private resetSim(): void {
@@ -637,10 +694,16 @@ export class App {
     this.renderer.selectedGateUid = null;
     this.renderer.wireFrom = null;
     this.renderer.wirePreviewTo = null;
+    this.state.pinnedInputs = [];
+    const pinPanel = document.getElementById('pin-panel');
+    if (pinPanel) { pinPanel.style.display = 'none'; pinPanel.innerHTML = ''; }
+    const pinBtn = document.getElementById('btn-pin');
+    if (pinBtn) pinBtn.classList.remove('armed');
     this.renderer.render();
     this.updateGoalBanner();
     this.updateTruthTable();
     this.updateStatus();
+    this.updateExplainPanel(null);
   }
 
   private clearBoard(): void {
@@ -652,10 +715,19 @@ export class App {
     this.state.wires = [];
     resetSimulation(this.state);
     this.saveCircuitNow();
+    this.renderer.selectedGateUid = null;
+    this.renderer.wireFrom = null;
+    this.renderer.wirePreviewTo = null;
+    this.state.pinnedInputs = [];
+    const pinPanel2 = document.getElementById('pin-panel');
+    if (pinPanel2) { pinPanel2.style.display = 'none'; pinPanel2.innerHTML = ''; }
+    const pinBtn2 = document.getElementById('btn-pin');
+    if (pinBtn2) pinBtn2.classList.remove('armed');
     this.renderer.render();
     this.updateGoalBanner();
     this.updateTruthTable();
     this.updateStatus();
+    this.updateExplainPanel(null);
   }
 
   // === Win/Loss ===
@@ -818,6 +890,82 @@ export class App {
         <div style="width:${pct}%;height:100%;background:var(--accent);transition:width 0.1s"></div>
       </div>
     `;
+  }
+
+  // === Tap-to-explain (#2) ===
+  // Plain-language readout of a tapped/selected gate using the LIVE signal
+  // map (state.signals), so the player can see WHY a gate outputs what it
+  // does — not just that it did.
+  private updateExplainPanel(uid: number | null): void {
+    const panel = document.getElementById('explain-panel');
+    if (!panel || !this.state) return;
+    if (uid == null) {
+      panel.innerHTML = '<span class="explain-hint">Tap a gate to see what it is doing.</span>';
+      return;
+    }
+    const gate = this.state.gates.find(g => g.uid === uid);
+    if (!gate) { panel.innerHTML = ''; return; }
+    const def = GATE_DEFS[gate.type];
+    const sig = this.state.signals.get(uid);
+
+    if (gate.type === 'INPUT') {
+      const idx = this.state.gates.filter(g => g.type === 'INPUT').indexOf(gate);
+      const val = this.state.inputValues[idx] ?? 0;
+      const pin = this.state.pinnedInputs[idx];
+      const pinNote = pin === 0 || pin === 1 ? ' (pinned)' : '';
+      panel.innerHTML = `<span class="explain-title">${def.label} ${gate.type === 'INPUT' ? (gate.x + ',' + gate.y) : ''}</span> ` +
+        `<span class="explain-body">Input <strong>${this.state.level.inputs[idx]?.id ?? ('In' + idx)}</strong> = ` +
+        `<span class="sig ${val ? 'on' : 'off'}">${val}</span>${pinNote}. This is a source — it feeds whatever you wire it to.</span>`;
+      return;
+    }
+
+    if (gate.type === 'OUTPUT') {
+      const actual = sig && sig.length ? sig[0] : 0.5;
+      const tgtIdx = this.state.gates.filter(g => g.type === 'OUTPUT').indexOf(gate);
+      const target = this.state.targetOutput[tgtIdx] ?? 0;
+      const match = actual === target ? 'match' : 'miss';
+      panel.innerHTML = `<span class="explain-title">${def.label}</span> ` +
+        `<span class="explain-body">Driven to <span class="sig ${actual ? 'on' : 'off'}">${actual}</span>, ` +
+        `target is <span class="sig ${target ? 'on' : 'off'}">${target}</span> — ` +
+        `<span class="${match}">${actual === target ? 'matches' : 'mismatch'}</span>. ` +
+        `This is the sink the level checks.</span>`;
+      return;
+    }
+
+    // A logic gate with inputs
+    const incoming = this.state.wires.filter(w => w.toGate === uid).sort((a, b) => a.toPin - b.toPin);
+    const parts: string[] = [];
+    for (let p = 0; p < (def.inputs || 1); p++) {
+      const w = incoming.find(x => x.toPin === p);
+      if (w) {
+        const src = this.state.gates.find(g => g.uid === w.fromGate);
+        const srcSig = this.state.signals.get(w.fromGate);
+        const v = srcSig && srcSig[w.fromPin] !== undefined ? srcSig[w.fromPin] : 0.5;
+        const srcName = src ? (src.type === 'INPUT' ? (this.state.level.inputs[this.state.gates.filter(g=>g.type==='INPUT').indexOf(src)]?.id ?? 'In') : src.type) : '?';
+        parts.push(`${srcName}=<span class="sig ${v ? 'on' : 'off'}">${v}</span>`);
+      } else {
+        parts.push(`pin${p}=<span class="sig off">—</span>`);
+      }
+    }
+    const out = sig && sig.length ? sig[0] : 0.5;
+    panel.innerHTML = `<span class="explain-title">${def.label}</span> ` +
+      `<span class="explain-body">inputs: ${parts.join(', ')} → output ` +
+      `<span class="sig ${out ? 'on' : 'off'}">${out}</span>. ${this.explainGateText(gate.type)}</span>`;
+  }
+
+  private explainGateText(type: PlacedGate['type']): string {
+    switch (type) {
+      case 'AND': return 'Rule: output 1 only if ALL inputs are 1.';
+      case 'OR': return 'Rule: output 1 if ANY input is 1.';
+      case 'NOT': return 'Rule: inverts its single input (1→0, 0→1).';
+      case 'XOR': return 'Rule: output 1 only if inputs DIFFER.';
+      case 'NAND': return 'Rule: AND then invert — 0 only if ALL inputs are 1.';
+      case 'BUFFER': return 'Rule: passes its input through; cleans weak (X) to last value.';
+      case 'CLOCK': return 'Rule: pulses 0/1 on a fixed period; no inputs.';
+      case 'COOLER': return 'Rule: cools nearby gates (no signal output).';
+      case 'REDUNDANT': return 'Rule: majority vote of its inputs.';
+      default: return '';
+    }
   }
 
   // === Save ===

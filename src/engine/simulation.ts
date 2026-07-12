@@ -58,6 +58,7 @@ export function createGameState(level: LevelDef, seed: number): GameState {
     targetOutput: [],
     totalCorrect: 0,
     totalTicks: 0,
+    pinnedInputs: [],
     seed,
     failures: [],
     nextGateUid: nextUid,
@@ -136,6 +137,14 @@ export function tickSimulation(state: GameState): void {
   // 1. Compute input values for this tick
   const inputValues: number[] = [];
   for (let i = 0; i < state.level.inputs.length; i++) {
+    // Pinned inputs override the level's static/clock cycle so the player
+    // can freeze one input combination and Step through it to observe how
+    // a single case propagates (a controlled "probe" of the circuit).
+    const pin = state.pinnedInputs[i];
+    if (pin === 0 || pin === 1) {
+      inputValues.push(pin);
+      continue;
+    }
     const inp = state.level.inputs[i];
     if (inp.type === 'static') {
       const vals = inp.value ?? [0];
@@ -340,6 +349,17 @@ export function checkLoss(state: GameState): boolean {
   // Loss if we've exceeded survival time + 50% grace and haven't won
   const maxTime = state.level.survivalTime * 1.5;
   return state.elapsed > maxTime && !checkWin(state);
+}
+
+// Force (or clear) an input to a fixed value so the player can freeze one
+// input combination and Step through it to observe propagation.
+// val === null releases the pin back to the level's static/clock cycle.
+export function setPinnedInput(state: GameState, index: number, val: number | null): void {
+  // Ensure the array is long enough for all level inputs.
+  while (state.pinnedInputs.length < state.level.inputs.length) {
+    state.pinnedInputs.push(null);
+  }
+  state.pinnedInputs[index] = val;
 }
 
 export function resetSimulation(state: GameState): void {
