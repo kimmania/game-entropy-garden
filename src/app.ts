@@ -175,15 +175,6 @@ export class App {
     this.renderer.setState(this.state);
     this.renderer.resize();
 
-    // Wire up renderer callbacks
-    this.renderer.onPlaceGate = (x, y) => this.handlePlaceGate(x, y);
-    this.renderer.onSelectGate = (uid) => this.handleSelectGate(uid);
-    this.renderer.onRotateGate = (uid) => { if (this.state) rotateGate(this.state, uid); this.renderer?.render(); };
-    this.renderer.onRemoveGate = (uid) => { if (this.state) { removeGate(this.state, uid); this.saveCircuitNow(); this.renderer?.render(); } };
-    this.renderer.onRemoveWire = (uid) => { if (this.state) { removeWire(this.state, uid); this.saveCircuitNow(); this.renderer?.render(); } };
-    this.renderer.onStartWire = (gateUid, pin) => this.handleStartWire(gateUid, pin);
-    this.renderer.onCompleteWire = (toGateUid, toPin) => this.handleCompleteWire(toGateUid, toPin);
-
     this.bindCanvasEvents();
   }
 
@@ -366,18 +357,7 @@ export class App {
     this.buildPalette();
   }
 
-  private handleSelectGate(uid: number | null): void {
-    if (this.renderer) this.renderer.selectedGateUid = uid;
-    this.renderer?.render();
-  }
-
   // === Wire drawing ===
-  private handleStartWire(gateUid: number, pin: number): void {
-    if (this.renderer) {
-      this.renderer.wireFrom = { gateUid, pin };
-    }
-  }
-
   private handleCompleteWire(toGateUid: number, toPin: number): void {
     if (!this.state || !this.renderer?.wireFrom) return;
     const from = this.renderer.wireFrom;
@@ -470,7 +450,7 @@ export class App {
         } else if (tool === 'delete') {
           if (this.state && this.renderer?.selectedGateUid) {
             const gate = this.state.gates.find(g => g.uid === this.renderer!.selectedGateUid);
-            if (gate && gate.type !== 'INPUT' && gate.type !== 'OUTPUT') {
+            if (gate && gate.type !== 'INPUT' && gate.type !== 'OUTPUT' && gate.type !== 'BROKEN_NOT') {
               removeGate(this.state, this.renderer.selectedGateUid);
             }
             this.renderer.selectedGateUid = null;
@@ -569,20 +549,20 @@ export class App {
     for (let i = 0; i < level.inputs.length; i++) {
       this.state.gates.push({
         uid: this.state.nextGateUid++, type: 'INPUT', x: 0, y: 1 + i, rotation: 0,
-        drift: 0, noiseTicks: 0, lastOutput: 0, powered: true,
+        drift: 0, noiseTicks: 0, lastOutput: 0,
       });
     }
     for (let i = 0; i < level.outputs.length; i++) {
       this.state.gates.push({
         uid: this.state.nextGateUid++, type: 'OUTPUT', x: level.grid.width - 1, y: 1 + i, rotation: 0,
-        drift: 0, noiseTicks: 0, lastOutput: 0, powered: true,
+        drift: 0, noiseTicks: 0, lastOutput: 0,
       });
     }
     if (level.prePlaced) {
       for (const pp of level.prePlaced) {
         this.state.gates.push({
           uid: this.state.nextGateUid++, type: pp.gate, x: pp.x, y: pp.y, rotation: 0,
-          drift: pp.drift ?? 0, noiseTicks: 0, lastOutput: 0, powered: false,
+          drift: pp.drift ?? 0, noiseTicks: 0, lastOutput: 0,
         });
       }
     }
@@ -784,7 +764,7 @@ export class App {
     // createGameState assigns INPUT=1,2.. OUTPUT=N+1,N+2.. then addGate continues sequentially
     const wires = this.state.wires
       .map(w => ({ fromGate: w.fromGate, fromPin: w.fromPin, toGate: w.toGate, toPin: w.toPin, path: w.path }));
-    saveCircuit(this.state.level.id, { levelId: this.state.level.id, gates, wires, starsEarned: 0, bestSurvival: 0 }, this.save);
+    saveCircuit(this.state.level.id, { version: 1, levelId: this.state.level.id, gates, wires, starsEarned: 0, bestSurvival: 0 }, this.save);
   }
 
   // === Help ===

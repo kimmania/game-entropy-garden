@@ -21,15 +21,6 @@ export class Renderer {
   hoverGateUid: number | null = null;
   hoverWireUid: number | null = null;
 
-  // callbacks
-  onPlaceGate: ((x: number, y: number) => void) | null = null;
-  onSelectGate: ((uid: number | null) => void) | null = null;
-  onRotateGate: ((uid: number) => void) | null = null;
-  onRemoveGate: ((uid: number) => void) | null = null;
-  onStartWire: ((gateUid: number, pin: number) => void) | null = null;
-  onCompleteWire: ((toGateUid: number, toPin: number) => void) | null = null;
-  onRemoveWire: ((uid: number) => void) | null = null;
-
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;

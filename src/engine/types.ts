@@ -30,7 +30,6 @@ export interface PlacedGate {
   drift: number;        // current drift level 0–1 (increases during sim)
   noiseTicks: number;   // remaining ticks of noise output
   lastOutput: Signal;   // last computed output (for buffer)
-  powered: boolean;     // for COOLER - needs power to function
 }
 
 export interface WireSegment {
@@ -72,6 +71,7 @@ export interface LevelDef {
 }
 
 export interface CircuitSave {
+  version: number;       // schema version; stale saves are ignored on load
   levelId: string;
   gates: { type: GateType; x: number; y: number; rotation: number }[];
   wires: { fromGate: number; fromPin: number; toGate: number; toPin: number; path: [number, number][] }[];
@@ -93,7 +93,6 @@ export interface GameState {
   inputValues: number[];  // current tick input values
   outputValues: number[];  // current tick output values
   targetOutput: number[]; // current tick target
-  correctTicks: number;   // consecutive correct output ticks
   totalCorrect: number;  // total correct ticks this run
   totalTicks: number;     // total ticks this run
   seed: number;

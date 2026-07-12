@@ -22,7 +22,7 @@ export function createGameState(level: LevelDef, seed: number): GameState {
   for (let i = 0; i < level.inputs.length; i++) {
     gates.push({
       uid: nextUid++, type: 'INPUT', x: 0, y: 1 + i, rotation: 0,
-      drift: 0, noiseTicks: 0, lastOutput: 0, powered: true,
+      drift: 0, noiseTicks: 0, lastOutput: 0,
     });
   }
 
@@ -30,7 +30,7 @@ export function createGameState(level: LevelDef, seed: number): GameState {
   for (let i = 0; i < level.outputs.length; i++) {
     gates.push({
       uid: nextUid++, type: 'OUTPUT', x: level.grid.width - 1, y: 1 + i, rotation: 0,
-      drift: 0, noiseTicks: 0, lastOutput: 0, powered: true,
+      drift: 0, noiseTicks: 0, lastOutput: 0,
     });
   }
 
@@ -39,7 +39,7 @@ export function createGameState(level: LevelDef, seed: number): GameState {
     for (const pp of level.prePlaced) {
       gates.push({
         uid: nextUid++, type: pp.gate, x: pp.x, y: pp.y, rotation: 0,
-        drift: pp.drift ?? 0, noiseTicks: 0, lastOutput: 0, powered: false,
+        drift: pp.drift ?? 0, noiseTicks: 0, lastOutput: 0,
       });
     }
   }
@@ -56,7 +56,6 @@ export function createGameState(level: LevelDef, seed: number): GameState {
     inputValues: [],
     outputValues: [],
     targetOutput: [],
-    correctTicks: 0,
     totalCorrect: 0,
     totalTicks: 0,
     seed,
@@ -74,7 +73,7 @@ export function addGate(state: GameState, type: PlacedGate['type'], x: number, y
 
   state.gates.push({
     uid: state.nextGateUid++, type, x, y, rotation: 0,
-    drift: state.level.startingEntropy, noiseTicks: 0, lastOutput: 0, powered: false,
+    drift: state.level.startingEntropy, noiseTicks: 0, lastOutput: 0,
   });
   return true;
 }
@@ -185,9 +184,14 @@ export function tickSimulation(state: GameState): void {
       const sourceSignals = newSignals.get(wire.fromGate);
       if (sourceSignals && wire.fromPin < sourceSignals.length) {
         let sig = sourceSignals[wire.fromPin];
-        // Apply wire corrosion
-        const segments = Math.max(1, wire.path.length);
-        const corrosionLoss = Math.floor(segments / 4) * 0.25;
+        // Apply wire corrosion. Longer wires (more grid cells spanned) gather
+        // more corrosion, so they're more likely to weaken the signal to X.
+        let cellLen = 0;
+        for (let i = 0; i < wire.path.length - 1; i++) {
+          cellLen += Math.abs(wire.path[i + 1][0] - wire.path[i][0])
+                   + Math.abs(wire.path[i + 1][1] - wire.path[i][1]);
+        }
+        const corrosionLoss = cellLen * 0.05;
         const corrosionLevel = wire.corrosion + corrosionLoss;
         if (corrosionLevel > 0.3 && sig !== 0.5) {
           if (rng() < corrosionLevel * 0.3) sig = 0.5;
@@ -271,10 +275,7 @@ export function tickSimulation(state: GameState): void {
     if (outputValues[i] !== targetOutput[i]) allCorrect = false;
   }
   if (allCorrect) {
-    state.correctTicks++;
     state.totalCorrect++;
-  } else {
-    state.correctTicks = 0;
   }
   state.totalTicks++;
 
@@ -350,7 +351,6 @@ export function resetSimulation(state: GameState): void {
   state.inputValues = [];
   state.outputValues = [];
   state.targetOutput = [];
-  state.correctTicks = 0;
   state.totalCorrect = 0;
   state.totalTicks = 0;
   state.failures = [];
@@ -360,7 +360,6 @@ export function resetSimulation(state: GameState): void {
     gate.drift = state.level.startingEntropy;
     gate.noiseTicks = 0;
     gate.lastOutput = 0;
-    gate.powered = false;
   }
 
   // Reset wire corrosion

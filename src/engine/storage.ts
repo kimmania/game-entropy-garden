@@ -2,6 +2,7 @@ import type { SaveData, CircuitSave } from './types.js';
 
 const SAVE_KEY = 'entropy-garden-save';
 const SAVE_VERSION = 1;
+const CIRCUIT_SAVE_VERSION = 1;
 
 export function createSave(): SaveData {
   return {
@@ -42,7 +43,11 @@ export function saveCircuit(levelId: string, circuit: CircuitSave, data: SaveDat
 }
 
 export function loadCircuit(levelId: string, data: SaveData): CircuitSave | null {
-  return data.circuits[levelId] ?? null;
+  const circuit = data.circuits[levelId];
+  // Drop stale/version-mismatched circuit saves rather than risk silently
+  // replaying a circuit whose stored gate UIDs no longer line up.
+  if (!circuit || circuit.version !== CIRCUIT_SAVE_VERSION) return null;
+  return circuit;
 }
 
 export function completeLevel(levelId: string, stars: number, data: SaveData): void {
