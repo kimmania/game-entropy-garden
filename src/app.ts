@@ -1,5 +1,6 @@
 import type { GameState, LevelDef, GateType, SaveData } from './engine/types.js';
 import { GATE_DEFS, TICKS_PER_SECOND } from './engine/gates.js';
+import { buildCircuitGraph, hasCycle } from './engine/circuit.js';
 import { createGameState, addGate, addWire, removeGate, removeWire, rotateGate, tickSimulation, resetSimulation, checkWin, checkLoss, canPlaceGate } from './engine/simulation.js';
 import { loadSave, saveSave, loadCircuit, saveCircuit, completeLevel, unlockLevel, isCompleted, isUnlocked } from './engine/storage.js';
 import { Renderer } from './ui/renderer.js';
@@ -384,6 +385,17 @@ export class App {
     const toGate = this.state.gates.find(g => g.uid === toGateUid);
     if (!fromGate || !toGate) return;
 
+    // Reject wires that would create a combinatorial loop (e.g. feeding a
+    // gate's own upstream input). Without this, Kahn's topological sort
+    // silently drops the cyclic gates and the circuit can never win.
+    if (this.wouldCreateCycle(from.gateUid, toGateUid)) {
+      this.toast('That connection would create a loop');
+      this.renderer.wireFrom = null;
+      this.renderer.wirePreviewTo = null;
+      this.renderer.render();
+      return;
+    }
+
     // Simple L-shaped path
     const path: [number, number][] = [
       [fromGate.x, fromGate.y],
@@ -393,8 +405,21 @@ export class App {
     addWire(this.state, from.gateUid, from.pin, toGateUid, toPin, path);
     this.renderer.wireFrom = null;
     this.renderer.wirePreviewTo = null;
-    // Don't save here — save on pointerup to avoid any side effects
+    this.saveCircuitNow(); // persist the wire so it survives reload/map round-trip
     this.renderer.render();
+  }
+
+  // Would adding a wire from -> to create a combinatorial loop?
+  // Build the graph as it would look with the new wire and check for any cycle.
+  private wouldCreateCycle(fromGateUid: number, toGateUid: number): boolean {
+    if (!this.state) return false;
+    if (fromGateUid === toGateUid) return true;
+    const probe: typeof this.state.wires = [
+      ...this.state.wires,
+      { uid: -1, fromGate: fromGateUid, fromPin: 0, toGate: toGateUid, toPin: 0, path: [], corrosion: 0 },
+    ];
+    const graph = buildCircuitGraph(this.state.gates, probe, this.state.level);
+    return hasCycle(graph);
   }
 
   // === Palette ===
