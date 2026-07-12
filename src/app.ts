@@ -17,6 +17,7 @@ export class App {
   private armedGate: GateType | null = null;
   private wireMode = false;
   private _dragState: { gateUid: number; startX: number; startY: number; moved: boolean } | null = null;
+  private _eventsBound = false;
 
   static async bootstrap(): Promise<void> {
     const app = new App();
@@ -131,6 +132,11 @@ export class App {
     if (!level) return;
     // Stop any running simulation from the previous level
     this.stopSimulation();
+    // Reset interaction state so nothing bleeds across levels (e.g. a
+    // dangling wireFrom or armed gate from the previous puzzle).
+    this.armedGate = null;
+    this.wireMode = false;
+    this._dragState = null;
     document.getElementById('map-view')!.style.display = 'none';
     document.getElementById('game-view')!.style.display = '';
     document.getElementById('level-name')!.textContent = level.name;
@@ -171,11 +177,28 @@ export class App {
   private setupCanvas(): void {
     if (!this.state) return;
     this.canvas = document.getElementById('board') as HTMLCanvasElement;
-    this.renderer = new Renderer(this.canvas);
+    // Reuse a single Renderer across levels (it only needs the canvas, and
+    // holds interaction state like wireFrom separately from GameState).
+    // Creating a new Renderer per level would leave the once-bound canvas
+    // listeners pointing at a stale renderer, breaking wiring on later
+    // levels. We (re)assign the current state and reset interaction state.
+    if (!this.renderer) {
+      this.renderer = new Renderer(this.canvas);
+      if (!this._eventsBound) {
+        this.bindCanvasEvents();
+        this._eventsBound = true;
+      }
+    }
     this.renderer.setState(this.state);
+    // Clear any interaction state left over from a previous level so nothing
+    // bleeds across puzzles (phantom wires / re-armed wireFrom).
+    this.renderer.selectedGateUid = null;
+    this.renderer.armedGateType = null;
+    this.renderer.wireFrom = null;
+    this.renderer.wirePreviewTo = null;
+    this.renderer.hoverGateUid = null;
+    this.renderer.hoverWireUid = null;
     this.renderer.resize();
-
-    this.bindCanvasEvents();
   }
 
   private bindCanvasEvents(): void {
