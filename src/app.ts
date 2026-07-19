@@ -68,6 +68,7 @@ export class App {
         </div>
         <div class="game-area">
           <div class="goal-banner" id="goal-banner"></div>
+          <div class="coach" id="coach"></div>
           <div class="canvas-wrap"><canvas id="board"></canvas></div>
           <div class="bottom-panel">
             <div class="truth-table" id="truth-table"></div>
@@ -164,6 +165,7 @@ export class App {
     this.updateGoalBanner();
     this.updateTruthTable();
     this.updateStatus();
+    this.updateCoach();
 
     // Defer render + resize to next frame so the browser has laid out game-view
     requestAnimationFrame(() => {
@@ -174,6 +176,7 @@ export class App {
     });
 
     if (!this.save.hasSeenHelp) this.showHelp();
+    else if (level.predict && !this.save.predictPassedBy.includes(levelId)) this.showPredict();
   }
 
   private setupCanvas(): void {
@@ -458,6 +461,7 @@ export class App {
     this.renderer.wirePreviewTo = null;
     this.saveCircuitNow(); // persist the wire so it survives reload/map round-trip
     this.renderer.render();
+    this.updateCoach();
   }
 
   // Would adding a wire from -> to create a combinatorial loop?
@@ -641,6 +645,7 @@ export class App {
     this.updateTruthTable();
     this.updateStatus();
     this.updateExplainPanel(this.renderer?.selectedGateUid ?? null);
+    this.updateCoach();
 
     if (checkWin(this.state)) {
       this.stopSimulation();
@@ -659,6 +664,7 @@ export class App {
     this.updateTruthTable();
     this.updateStatus();
     this.updateExplainPanel(this.renderer.selectedGateUid ?? null);
+    this.updateCoach();
   }
 
   private resetSim(): void {
@@ -704,6 +710,7 @@ export class App {
     this.updateTruthTable();
     this.updateStatus();
     this.updateExplainPanel(null);
+    this.updateCoach();
   }
 
   private clearBoard(): void {
@@ -728,6 +735,7 @@ export class App {
     this.updateTruthTable();
     this.updateStatus();
     this.updateExplainPanel(null);
+    this.updateCoach();
   }
 
   // === Win/Loss ===
@@ -868,6 +876,52 @@ export class App {
     `;
   }
 
+  // === Contextual Coach (#5) ===
+  // A live line under the goal banner that nudges the player based on the
+  // current board/sim state, per level concept. Updates on startLevel,
+  // wire completion, and every sim tick.
+  private updateCoach(): void {
+    const el = document.getElementById('coach');
+    if (!el || !this.state) return;
+    const lvl = this.state.level;
+    const placedGates = this.state.gates.filter(g => g.type !== 'INPUT' && g.type !== 'OUTPUT' && g.type !== 'BROKEN_NOT');
+    const wires = this.state.wires;
+    const userWireCount = wires.length;
+    const outputWired = wires.some(w => this.state!.gates.find(g => g.uid === w.toGate)?.type === 'OUTPUT');
+
+    let msg = '';
+    switch (lvl.id) {
+      case 'tut-01': // NOT
+        if (placedGates.length === 0) msg = 'Tap NOT in the palette, then tap a cell to place it between A and Y.';
+        else if (!userWireCount) msg = 'Wire A → NOT, then NOT → Y. (Tap Wire, tap source, tap target.)';
+        else if (!outputWired) msg = 'Almost — connect NOT → Y so the output is driven.';
+        else if (this.state.simState === 'running') msg = 'Running — watch the explain panel: NOT flips A. A=1 → Y=0.';
+        else msg = 'Now Run it. Y should be the opposite of A for the whole survival time.';
+        break;
+      case 'tut-02': // AND
+        if (placedGates.length === 0) msg = 'Place one AND gate, then wire BOTH A and B into it, and AND → Y.';
+        else if (outputWired && wires.filter(w => this.state!.gates.find(g => g.uid === w.toGate)?.type === 'AND').length < 2) msg = 'AND needs both inputs — wire the second input (A or B) into the AND.';
+        else if (!outputWired) msg = 'Wire AND → Y. The output should be 1 only when A and B are both 1.';
+        else if (this.state.simState === 'running') msg = 'Running — try the Pin button: set A=1,B=0 and Step. AND stays 0.';
+        else msg = 'Run it. Use Pin + Step to isolate one row of the truth table.';
+        break;
+      case 'tut-03': // OR
+        if (placedGates.length === 0) msg = 'Place one OR gate, then wire BOTH A and B into it, and OR → Y.';
+        else if (outputWired && wires.filter(w => this.state!.gates.find(g => g.uid === w.toGate)?.type === 'OR').length < 2) msg = 'OR needs both inputs — wire the second input into the OR.';
+        else if (!outputWired) msg = 'Wire OR → Y. The output should be 1 when either A or B is 1.';
+        else if (this.state.simState === 'running') msg = 'Running — try Pin: A=1,B=0 still gives Y=1 (OR fires on either input).';
+        else msg = 'Run it, then watch the truth-table checklist light up row by row.';
+        break;
+      default:
+        // Non-tutorial: minimal nudge
+        if (placedGates.length === 0) msg = `Place a gate from the palette to begin.`;
+        else if (!outputWired) msg = `Wire a gate into the output ${lvl.outputs[0]?.id ?? 'Y'} to drive it.`;
+        else if (this.state.simState === 'running') msg = 'Running — check the truth table for any red mismatches.';
+        else msg = `Run the simulation to test your circuit.`;
+    }
+    el.innerHTML = `<span class="coach-icon">💡</span><span class="coach-text">${msg}</span>`;
+  }
+
   // === Truth Table ===
   private updateTruthTable(): void {
     if (!this.state) return;
@@ -1002,6 +1056,53 @@ export class App {
   }
 
   // === Help ===
+  // === #4: Predict-the-output gate ===
+  // Shown once per level (tracked in save.predictPassedBy) BEFORE building,
+  // so the player must state the rule before seeing it confirmed.
+  private showPredict(): void {
+    const lvl = this.state?.level;
+    const p = lvl?.predict;
+    if (!lvl || !p) return;
+    const inChips = p.inputs.map((v, i) =>
+      v === null ? '' : `<span class="pred-chip ${v ? 'on' : 'off'}">${lvl.inputs[i]?.id ?? ('In' + i)}=${v}</span>`
+    ).join('');
+    const opts = [0, 1].map(v =>
+      `<button class="pred-opt" data-val="${v}">${v}</button>`
+    ).join('');
+    this.showModal(`
+      <h2>Predict the output</h2>
+      <p>${p.prompt}</p>
+      <div class="pred-inputs">${inChips}</div>
+      <p style="margin-top:10px">What should <strong>${p.outputId}</strong> be?</p>
+      <div class="pred-options">${opts}</div>
+      <div class="pred-feedback" id="pred-feedback" style="display:none"></div>
+      <div class="modal-buttons">
+        <button class="ctrl-btn" id="pred-cancel">Skip</button>
+        <button class="ctrl-btn primary" id="pred-ok" style="display:none">Got it — start building</button>
+      </div>
+    `);
+    const feedback = document.getElementById('pred-feedback')!;
+    const okBtn = document.getElementById('pred-ok')!;
+    const cancelBtn = document.getElementById('pred-cancel')!;
+    const choose = (val: number) => {
+      const correct = val === p.answer;
+      feedback.style.display = '';
+      feedback.className = `pred-feedback ${correct ? 'ok' : 'no'}`;
+      feedback.innerHTML = (correct ? '✓ Correct. ' : '✗ Not quite. ') + p.explain;
+      okBtn.style.display = '';
+      cancelBtn.style.display = 'none';
+    };
+    document.querySelectorAll<HTMLElement>('.pred-opt').forEach(b => {
+      b.onclick = () => {
+        if (!this.save.predictPassedBy.includes(lvl.id)) this.save.predictPassedBy.push(lvl.id);
+        saveSave(this.save);
+        choose(Number(b.dataset.val));
+      };
+    });
+    okBtn.onclick = () => this.hideModal();
+    cancelBtn.onclick = () => this.hideModal();
+  }
+
   private showHelp(): void {
     this.save.hasSeenHelp = true;
     saveSave(this.save);

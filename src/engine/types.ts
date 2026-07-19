@@ -68,6 +68,14 @@ export interface LevelDef {
   prePlaced?: { gate: GateType; x: number; y: number; drift?: number }[];
   startingEntropy: number;  // 0–1 initial corrosion/drift
   description: string;
+  // #4 teaching: a "predict the output" gate shown before building.
+  predict?: {
+    prompt: string;          // e.g. "Given the inputs below, what should Y be?"
+    inputs: (number | null)[]; // input values to show (null = don't show this input)
+    outputId: string;        // output whose value the player predicts
+    answer: number;          // correct predicted value (0/1)
+    explain: string;         // shown after the player answers, regardless of correctness
+  };
 }
 
 export interface CircuitSave {
@@ -109,4 +117,5 @@ export interface SaveData {
   unlocked: string[];     // level IDs
   circuits: Record<string, CircuitSave>; // levelId → circuit
   hasSeenHelp: boolean;
+  predictPassedBy: string[]; // level IDs whose #4 predict gate was passed
 }

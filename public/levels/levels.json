@@ -15,6 +15,13 @@
     "starGates": [3, 2, 1],
     "palette": ["NOT"],
     "startingEntropy": 0,
+    "predict": {
+      "prompt": "Before you build: the input A will cycle 1,0,1,0. The output Y must be the OPPOSITE of A. For this one row (A=1), what should Y be?",
+      "inputs": [1],
+      "outputId": "Y",
+      "answer": 0,
+      "explain": "A=1 → Y=0. A NOT gate flips its input, so it's the right tool here."
+    },
     "description": "The output must be the opposite of the input. Place a single NOT gate between the input and output."
   },
   {
@@ -34,6 +41,13 @@
     "starGates": [2, 1, 1],
     "palette": ["AND"],
     "startingEntropy": 0,
+    "predict": {
+      "prompt": "Before you build: for the row A=1, B=1, what should Y be?",
+      "inputs": [1, 1],
+      "outputId": "Y",
+      "answer": 1,
+      "explain": "Y=1 only when BOTH A and B are 1. An AND gate does exactly that."
+    },
     "description": "Output is 1 only when both inputs are 1. Wire both inputs into a single AND gate, then to the output."
   },
   {
@@ -53,6 +67,13 @@
     "starGates": [2, 1, 1],
     "palette": ["OR"],
     "startingEntropy": 0,
+    "predict": {
+      "prompt": "Before you build: for the row A=1, B=0, what should Y be?",
+      "inputs": [1, 0],
+      "outputId": "Y",
+      "answer": 1,
+      "explain": "Y=1 when EITHER input is 1. An OR gate fires on any 1 input."
+    },
     "description": "Output is 1 when either input is 1. Wire both inputs into a single OR gate, then to the output."
   },
   {

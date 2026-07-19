@@ -11,6 +11,7 @@ export function createSave(): SaveData {
     unlocked: [],
     circuits: {},
     hasSeenHelp: false,
+    predictPassedBy: [],
   };
 }
 
